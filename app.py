@@ -3,24 +3,12 @@ import pandas as pd
 import openpyxl
 from datetime import datetime
 import os
-import io
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
-from apscheduler.schedulers.background import BackgroundScheduler
-import atexit
 
 EXCEL_FILE = "Final_Plant_System_With_All_Dropdowns.xlsx"
 
-# --- 📧 EMAIL CONFIGURATION ---
-EMAIL_SENDER = "aapka_gmail@gmail.com"
-EMAIL_PASSWORD = "xxxx xxxx xxxx xxxx"       
-EMAIL_RECEIVER = "aapka_mail@gmail.com"      
-
 st.set_page_config(page_title="Colour Textile Portal", layout="wide")
 
-# --- 💅 CLEAN & PREMIUM GLOBAL OVERRIDES ---
+# --- 💅 PREMIUM GLOBAL STYLING & FIXES ---
 st.markdown("""
 <style>
     .reportview-container {
@@ -62,11 +50,27 @@ st.markdown("""
         100% { background-position: 0% 50%; }
     }
 
-    div[data-testid="stForm"] label {
-        color: #FFFFFF !important;
+    /* FIX: Form ke andar labels ko hamesha visible aur readable rakhne ke liye */
+    div[data-testid="stForm"] label, .stMarkdown label, label[data-testid="stWidgetLabel"] {
+        color: #2C3E50 !important;
         font-weight: 600 !important;
         font-size: 14px !important;
         letter-spacing: 0.5px;
+        margin-bottom: 5px !important;
+    }
+    
+    /* Login screen labels special styling */
+    .login-box label {
+        color: #FFFFFF !important;
+    }
+    
+    .sidebar-brand-box {
+        background: linear-gradient(135deg, #1F4E79, #2c3e50);
+        padding: 18px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+        border-left: 5px solid #FF5733;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     
     .dashboard-card {
@@ -110,7 +114,7 @@ if not st.session_state["logged_in"]:
     st.markdown(f"""
     <style>
         .stApp {{
-            background-image: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url("https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?q=80&w=1920&auto=format&fit=crop");
+            background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url("https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?q=80&w=1920&auto=format&fit=crop");
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -119,6 +123,9 @@ if not st.session_state["logged_in"]:
             border: none !important;
             padding: 0 !important;
             background: transparent !important;
+        }}
+        div[data-testid="stForm"] label {{
+            color: #FFFFFF !important;
         }}
     </style>
     """, unsafe_allow_html=True)
@@ -148,10 +155,16 @@ else:
     user = st.session_state["current_user"]
     st.markdown('<h1 class="global-header">COLOUR TEXTILE</h1>', unsafe_allow_html=True)
     
-    st.sidebar.markdown(f"### 👤 Welcome, **{user['name']}**")
-    st.sidebar.markdown(f"📋 Role: `{user['role'].upper()}`")
-    
-    st.sidebar.markdown("---")
+    # 🆕 UPGRADED PREMIUM BRAND SIDEBAR HEADER
+    st.sidebar.markdown(f"""
+    <div class="sidebar-brand-box">
+        <div style="color: #FFC300; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 3px;">SYSTEM PORTAL</div>
+        <div style="color: #FFFFFF; font-size: 16px; font-weight: 800; letter-spacing: 0.5px;">WELCOME TO COLOUR TEXTILE</div>
+        <div style="border-top: 1px solid rgba(255,255,255,0.15); margin: 8px 0px;"></div>
+        <div style="color: #E0E6ED; font-size: 14px; font-weight: 500;">👤 User: <span style="color: #30c381; font-weight: 700;">{user['name']}</span></div>
+        <div style="color: #B4C6E7; font-size: 12px; margin-top: 2px;">📋 Access Level: <b>{user['role'].upper()}</b></div>
+    </div>
+    """, unsafe_allow_html=True)
     
     if user["role"] == "admin":
         nav_choice = st.sidebar.radio("🧭 Navigation Menu", ["📊 Dashboard", "📝 Data Entry", "🎯 Target Settings"])
@@ -175,7 +188,7 @@ else:
         except:
             pass
 
-    if st.sidebar.button("🚪 Logout"):
+    if st.sidebar.button("🚪 Logout System"):
         st.session_state["logged_in"] = False
         st.session_state["current_user"] = None
         st.rerun()
@@ -201,29 +214,28 @@ else:
             with st.form("entry_form_admin", clear_on_submit=True):
                 col1, col2 = st.columns(2)
                 with col1:
-                    date_input = st.date_input("Date", datetime.now())
-                    challan_no = st.text_input("Challan Number")
-                    design_no = st.text_input("Design Number")
-                    party_name = st.selectbox("Select Party Name", st.session_state["party_options"])
+                    date_input = st.date_input("Select Date", datetime.now())
+                    challan_no = st.text_input("Enter Challan Number Locked", placeholder="e.g. CH-9921")
+                    design_no = st.text_input("Enter Design Number", placeholder="e.g. D-401")
+                    party_name = st.selectbox("Select Party Name Account", st.session_state["party_options"])
                 with col2:
-                    item_type = st.selectbox("Select Item Type", st.session_state["item_options"])
-                    total_pcs = st.number_input("Total Pieces", min_value=0, step=1)
-                    fresh_pcs = st.number_input("Fresh Pieces", min_value=0, step=1)
-                    seconds_pcs = st.number_input("Seconds Pieces", min_value=0, step=1)
+                    item_type = st.selectbox("Select Fabric / Item Type", st.session_state["item_options"])
+                    total_pcs = st.number_input("Total Pieces Count", min_value=0, step=1)
+                    fresh_pcs = st.number_input("Fresh Quality Pieces", min_value=0, step=1)
+                    seconds_pcs = st.number_input("Seconds Damage Pieces", min_value=0, step=1)
                 if st.form_submit_button("SAVE ADMIN ENTRY"):
                     if fresh_pcs + seconds_pcs != total_pcs:
-                        st.error("❌ Total mismatch!")
+                        st.error("❌ Total mismatch! (Fresh + Seconds) must be equal to Total Pcs.")
                     else:
                         wb = openpyxl.load_workbook(EXCEL_FILE)
                         ws = wb["Supervisor Entry"]
                         ws.append([date_input.strftime("%d-%m-%Y"), design_no, party_name, item_type, total_pcs, fresh_pcs, seconds_pcs, user["name"], challan_no])
                         wb.save(EXCEL_FILE)
-                        st.success("🎉 Entry Saved!")
+                        st.success("🎉 Entry Saved Successfully!")
 
         # --- DASHBOARD & SUPERVISOR VIEW ---
         else:
             if user["role"] == "supervisor":
-                # Checkbox values fetch dynamic logic
                 can_entry = user.get("p_entry", True)
                 can_view_logs = user.get("p_view", True)
                 can_edit_logs = user.get("p_edit", False)
@@ -241,25 +253,25 @@ else:
                     with st.form("entry_form_sup", clear_on_submit=True):
                         col1, col2 = st.columns(2)
                         with col1:
-                            date_input = st.date_input("Date", datetime.now())
-                            challan_no = st.text_input("Challan Number")
-                            design_no = st.text_input("Design Number")
-                            party_name = st.selectbox("Select Party Name", st.session_state["party_options"])
+                            date_input = st.date_input("Select Production Date", datetime.now())
+                            challan_no = st.text_input("Enter Challan Number", placeholder="e.g. CH-205")
+                            design_no = st.text_input("Enter Design Number/Code", placeholder="e.g. DS-902")
+                            party_name = st.selectbox("Choose Party Name", st.session_state["party_options"])
                         with col2:
-                            item_type = st.selectbox("Select Item Type", st.session_state["item_options"])
-                            total_pcs = st.number_input("Total Pieces", min_value=0, step=1)
-                            fresh_pcs = st.number_input("Fresh Pieces", min_value=0, step=1)
-                            seconds_pcs = st.number_input("Seconds Pieces", min_value=0, step=1)
+                            item_type = st.selectbox("Choose Item Type", st.session_state["item_options"])
+                            total_pcs = st.number_input("Enter Total Pieces", min_value=0, step=1)
+                            fresh_pcs = st.number_input("Enter Fresh Pieces", min_value=0, step=1)
+                            seconds_pcs = st.number_input("Enter Seconds Pieces", min_value=0, step=1)
                         
                         if st.form_submit_button("SAVE PRODUCTION ENTRY"):
                             if fresh_pcs + seconds_pcs != total_pcs:
-                                st.error("❌ Calculation error!")
+                                st.error("❌ Calculation mismatch! Fresh + Seconds must equal Total Pieces.")
                             else:
                                 wb = openpyxl.load_workbook(EXCEL_FILE)
                                 ws = wb["Supervisor Entry"]
                                 ws.append([date_input.strftime("%d-%m-%Y"), design_no, party_name, item_type, total_pcs, fresh_pcs, seconds_pcs, user["name"], challan_no])
                                 wb.save(EXCEL_FILE)
-                                st.success("🎉 Entry Saved!")
+                                st.success("🎉 Entry Saved to Cloud Sheet!")
                                 st.rerun()
                 else:
                     st.warning("⚠️ Aapko system me Data Entry karne ki permission nahi hai.")
@@ -274,7 +286,6 @@ else:
                         
                     sup_df = df[df["Supervisor"] == user["name"]] if excel_loaded else pd.DataFrame()
                     
-                    # Agar admin ne edit ticked kiya hai toh data edit karne dega streamlits data_editor se
                     if can_edit_logs and not sup_df.empty:
                         edited_sup_df = st.data_editor(sup_df, hide_index=True, use_container_width=True)
                         if st.button("Save Edited Rows Changes"):
@@ -326,7 +337,7 @@ else:
                     
                 with col_right:
                     st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
-                    st.subheader("🍩 Share Share Matrix Chart")
+                    st.subheader("🍩 Share Matrix Chart")
                     chart_labels = [it for it in items_list if item_groups.get(it, 0) > 0]
                     chart_values = [item_groups.get(it, 0) for it in items_list if item_groups.get(it, 0) > 0]
                     if chart_values:
@@ -356,7 +367,7 @@ else:
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         st.markdown("**➕ Add New Party**")
-                        new_party = st.text_input("Party Name to Add").strip()
+                        new_party = st.text_input("Enter Party Name to Add", placeholder="e.g. Balaji Corp").strip()
                         if st.button("Save New Party"):
                             if new_party and new_party not in st.session_state["party_options"]:
                                 st.session_state["party_options"].append(new_party)
@@ -364,8 +375,8 @@ else:
                                 st.rerun()
                     with col2:
                         st.markdown("**✏️ Edit Party Name**")
-                        party_to_edit = st.selectbox("Select Party to Edit", st.session_state["party_options"], key="edt_p")
-                        edited_party_name = st.text_input("Enter New Name for Party", value=party_to_edit)
+                        party_to_edit = st.selectbox("Select Target Party to Edit", st.session_state["party_options"], key="edt_p")
+                        edited_party_name = st.text_input("Enter New Modified Name", value=party_to_edit)
                         if st.button("Update Party Name"):
                             if edited_party_name and party_to_edit:
                                 idx = st.session_state["party_options"].index(party_to_edit)
@@ -374,8 +385,8 @@ else:
                                 st.rerun()
                     with col3:
                         st.markdown("**❌ Remove Party**")
-                        party_to_remove = st.selectbox("Select Party to Remove", st.session_state["party_options"], key="rem_p")
-                        if st.button("Delete Party", type="primary"):
+                        party_to_remove = st.selectbox("Select Party to Delete", st.session_state["party_options"], key="rem_p")
+                        if st.button("Delete Party From System", type="primary"):
                             if party_to_remove in st.session_state["party_options"]:
                                 st.session_state["party_options"].remove(party_to_remove)
                                 st.rerun()
@@ -384,7 +395,7 @@ else:
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         st.markdown("**➕ Add New Item Type**")
-                        new_item = st.text_input("Item Name to Add").strip()
+                        new_item = st.text_input("Enter Item Name to Add", placeholder="e.g. SILK SAREE").strip()
                         if st.button("Save New Item"):
                             if new_item and new_item.upper() not in st.session_state["item_options"]:
                                 st.session_state["item_options"].append(new_item.upper())
@@ -392,8 +403,8 @@ else:
                                 st.rerun()
                     with col2:
                         st.markdown("**✏️ Edit Item Name**")
-                        item_to_edit = st.selectbox("Select Item to Edit", st.session_state["item_options"], key="edt_i")
-                        edited_item_name = st.text_input("Enter New Name for Item", value=item_to_edit)
+                        item_to_edit = st.selectbox("Select Item to Edit from List", st.session_state["item_options"], key="edt_i")
+                        edited_item_name = st.text_input("Enter New Name for Selected Item", value=item_to_edit)
                         if st.button("Update Item Name"):
                             if edited_item_name and item_to_edit:
                                 idx = st.session_state["item_options"].index(item_to_edit)
@@ -402,8 +413,8 @@ else:
                                 st.rerun()
                     with col3:
                         st.markdown("**❌ Remove Item Type**")
-                        item_to_remove = st.selectbox("Select Item to Remove", st.session_state["item_options"], key="rem_i")
-                        if st.button("Delete Item", type="primary"):
+                        item_to_remove = st.selectbox("Select Item to Delete from System", st.session_state["item_options"], key="rem_i")
+                        if st.button("Delete Item Category", type="primary"):
                             if item_to_remove in st.session_state["item_options"]:
                                 st.session_state["item_options"].remove(item_to_remove)
                                 st.rerun()
@@ -411,17 +422,16 @@ else:
                 with t3:
                     col_u1, col_u2, col_u3 = st.columns(3)
                     with col_u1:
-                        # 🗳️ NEW CHECKBOX BASED PERMISSIONS LAYOUT HERE
                         st.markdown("**➕ Add New Supervisor Account**")
                         with st.form("add_user_form", clear_on_submit=True):
-                            add_id = st.text_input("New Username / ID").strip()
-                            add_pass = st.text_input("Set Password").strip()
-                            add_name = st.text_input("Supervisor Real Name").strip()
+                            add_id = st.text_input("Set Login ID / Username", placeholder="e.g. ramesh01").strip()
+                            add_pass = st.text_input("Set Account Password", type="password", placeholder="••••••••").strip()
+                            add_name = st.text_input("Supervisor Full Real Name", placeholder="e.g. Ramesh Kumar").strip()
                             
-                            st.markdown("⚠️ **Set Custom Permissions:**")
-                            cb_entry = st.checkbox("📝 Allow Data Entry Form", value=True)
-                            cb_view = st.checkbox("📋 Allow View Logs Sheet", value=True)
-                            cb_edit = st.checkbox("✏️ Allow Edit Logs Records", value=False)
+                            st.markdown("⚠️ **Set Dynamic Custom Permissions:**")
+                            cb_entry = st.checkbox("Allow Data Entry Form Access", value=True)
+                            cb_view = st.checkbox("Allow View Production Logs", value=True)
+                            cb_edit = st.checkbox("Allow Edit Logged Records", value=False)
                             
                             if st.form_submit_button("Create Account"):
                                 if add_id and add_pass and add_name:
@@ -434,7 +444,7 @@ else:
                                             "p_view": cb_view,
                                             "p_edit": cb_edit
                                         }
-                                        st.success(f"Supervisor '{add_name}' Created with Selected Permissions!")
+                                        st.success(f"Supervisor '{add_name}' Created!")
                                         st.rerun()
                                     else:
                                         st.error("❌ ID already exists!")
@@ -445,16 +455,16 @@ else:
                         sups_only = [u for u in all_users if st.session_state["users"][u]["role"] == "supervisor"]
                         
                         if sups_only:
-                            selected_sup = st.selectbox("Select ID to Edit", sups_only, key="sel_sup_edt")
+                            selected_sup = st.selectbox("Select Supervisor ID to Modify", sups_only, key="sel_sup_edt")
                             current_sup_data = st.session_state["users"][selected_sup]
                             
-                            edit_name = st.text_input("Change Full Name", value=current_sup_data["name"])
-                            edit_pass = st.text_input("Change Password", value=current_sup_data["password"])
+                            edit_name = st.text_input("Edit Full Name Display", value=current_sup_data["name"])
+                            edit_pass = st.text_input("Edit Security Password", value=current_sup_data["password"])
                             
-                            st.markdown("⚙️ **Update Permissions Toggle:**")
-                            edit_cb_entry = st.checkbox("📝 Allow Data Entry Form", value=current_sup_data.get("p_entry", True), key="ed_e")
-                            edit_cb_view = st.checkbox("📋 Allow View Logs Sheet", value=current_sup_data.get("p_view", True), key="ed_v")
-                            edit_cb_edit = st.checkbox("✏️ Allow Edit Logs Records", value=current_sup_data.get("p_edit", False), key="ed_d")
+                            st.markdown("⚙️ **Update Checkbox Permissions:**")
+                            edit_cb_entry = st.checkbox("Allow Data Entry Form Access", value=current_sup_data.get("p_entry", True), key="ed_e")
+                            edit_cb_view = st.checkbox("Allow View Production Logs", value=current_sup_data.get("p_view", True), key="ed_v")
+                            edit_cb_edit = st.checkbox("Allow Edit Logged Records", value=current_sup_data.get("p_edit", False), key="ed_d")
                             
                             if st.button("Update Supervisor Account"):
                                 if edit_name and edit_pass:
@@ -471,10 +481,10 @@ else:
                     with col_u3:
                         st.markdown("**❌ Remove Supervisor**")
                         if sups_only:
-                            sup_to_remove = st.selectbox("Select ID to Delete", sups_only, key="sel_sup_rem")
+                            sup_to_remove = st.selectbox("Select Supervisor ID to Delete", sups_only, key="sel_sup_rem")
                             if st.button("Delete Supervisor Account", type="primary"):
                                 del st.session_state["users"][sup_to_remove]
-                                st.warning("Account deleted!")
+                                st.warning("Account deleted from database!")
                                 st.rerun()
                         else:
                             st.info("No accounts to delete.")
