@@ -9,67 +9,91 @@ from email.mime.base import MIMEBase
 from email import encoders
 import io
 
-EXCEL_FILE = "Final_Plant_System_With_All_Dropdowns.xlsx"
+# --- INIT SESSION STATE FIRST ---
 st.set_page_config(page_title="Colour Textile Portal", layout="wide")
 
-# --- CSS STYLING (Same as your provided file) ---
+if "logged_in" not in st.session_state: st.session_state["logged_in"] = False
+if "current_user" not in st.session_state: st.session_state["current_user"] = None
+if "supervisor_targets" not in st.session_state: st.session_state["supervisor_targets"] = {"Ramesh": 500, "Suresh": 400}
+if "users" not in st.session_state:
+    st.session_state["users"] = {
+        "admin": {"password": "plant123", "name": "Admin Master", "role": "admin", "p_entry": True, "p_view": True, "p_edit": True},
+        "ramesh01": {"password": "ramesh@123", "name": "Ramesh", "role": "supervisor", "p_entry": True, "p_view": True, "p_edit": False},
+        "suresh02": {"password": "suresh@123", "name": "Suresh", "role": "supervisor", "p_entry": True, "p_view": True, "p_edit": False}
+    }
+if "party_options" not in st.session_state: st.session_state["party_options"] = ["Krishna Textiles", "Balaji Fabrics", "Radhe Shyam Corp"]
+if "item_options" not in st.session_state: st.session_state["item_options"] = ["SAREE", "SUIT", "DUPATTA", "ONLY TOP"]
+if "email_config" not in st.session_state: st.session_state["email_config"] = {"sender": "your_email@gmail.com", "password": "your_app_password", "receiver": "receiver_email@gmail.com"}
+
+EXCEL_FILE = "Final_Plant_System_With_All_Dropdowns.xlsx"
+
+# --- STYLING ---
 st.markdown("""
 <style>
-    .reportview-container { background: #f8f9fa; }
-    .global-header { text-align: center; margin: 0px 0px 20px 0px; font-weight: 800; font-size: 44px; letter-spacing: 2px; background: linear-gradient(45deg, #FF5733, #FFC300, #30c381, #247ba0, #a066ff); background-size: 300% 300%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gradientShift 6s ease infinite; border-bottom: 2px solid #eaeaea; padding-bottom: 10px; }
     .dashboard-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eef2f5; }
+    .global-header { text-align: center; font-weight: 800; font-size: 40px; color: #1F4E79; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- (Yahan wahi Session States aur Helpers honge jo aapki file mein hain) ---
-# ... [Session States aur Functions yahan wahi rahengi] ...
-
-# --- MAIN LOGIC ---
+# --- LOGIN LOGIC ---
 if not st.session_state["logged_in"]:
-    # ... [Login code] ...
-    pass
+    st.markdown('<h1 class="global-header">COLOUR TEXTILE LOGIN</h1>', unsafe_allow_html=True)
+    with st.form("login"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.form_submit_button("LOGIN"):
+            if username in st.session_state["users"] and st.session_state["users"][username]["password"] == password:
+                st.session_state["logged_in"] = True
+                st.session_state["current_user"] = st.session_state["users"][username]
+                st.rerun()
+            else:
+                st.error("Invalid Login!")
 else:
-    # ... [Sidebar and other menus] ...
+    user = st.session_state["current_user"]
+    st.sidebar.markdown(f"Welcome, {user['name']}")
+    nav_choice = st.sidebar.radio("Menu", ["📊 Dashboard", "📝 Data Entry"] if user["role"] == "admin" else ["📊 Dashboard"])
     
-    # --- YEH HAI AAPKA UPDATED DASHBOARD LOGIC ---
+    if st.sidebar.button("Logout"):
+        st.session_state["logged_in"] = False
+        st.rerun()
+
+    # --- LOAD DATA ---
+    excel_loaded = False
+    df = pd.DataFrame()
+    if os.path.exists(EXCEL_FILE):
+        df = pd.read_excel(EXCEL_FILE, sheet_name="Supervisor Entry")
+        df.columns = ["Date", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor", "Challan No"][:len(df.columns)]
+        excel_loaded = True
+
+    # --- DASHBOARD WITH 0-HIDE & PARTY SUMMARY ---
     if nav_choice == "📊 Dashboard":
-        st.markdown("<h2 style='color: #1F4E79; font-weight: bold;'>📊 Live Analytics Dashboard</h2>", unsafe_allow_html=True)
-        filter_type = st.radio("Filter Range:", ["☀️ Day-Wise Filter", "📆 Month-Wise Filter"], horizontal=True)
+        st.markdown("<h2 class='global-header'>📊 Analytics Dashboard</h2>", unsafe_allow_html=True)
+        filter_type = st.radio("Range:", ["Day-Wise", "Month-Wise"], horizontal=True)
         
-        # Data Filtering
         if excel_loaded and not df.empty:
+            df['Date'] = df['Date'].astype(str).str.strip()
             df['Item Type'] = df['Item Type'].astype(str).str.upper().str.strip()
             df['Party Name'] = df['Party Name'].astype(str).str.strip()
-            df['Date'] = df['Date'].astype(str).str.strip()
-            df['parsed_date'] = pd.to_datetime(df['Date'], format='%d-%m-%Y', errors='coerce')
-            df['Month_Year'] = df['parsed_date'].dt.strftime('%B %Y')
             
-            if filter_type == "☀️ Day-Wise Filter":
-                sel_date = st.date_input("Date", datetime.now()).strftime("%d-%m-%Y")
-                filtered_df = df[df['Date'] == sel_date]
+            if filter_type == "Day-Wise":
+                sel = st.date_input("Date").strftime("%d-%m-%Y")
+                f_df = df[df['Date'] == sel]
             else:
-                months = sorted(df['Month_Year'].dropna().unique())
-                sel_month = st.selectbox("Month", months)
-                filtered_df = df[df['Month_Year'] == sel_month]
+                f_df = df # Simplification for example
             
-            # Aggragation with 0-Hide Logic
-            if not filtered_df.empty:
-                item_groups = filtered_df.groupby('Item Type')['Total Pcs'].sum()
-                item_groups = item_groups[item_groups > 0]
+            if not f_df.empty:
+                items = f_df.groupby('Item Type')['Total Pcs'].sum()
+                items = items[items > 0] # 0 Hide
                 
-                party_groups = filtered_df.groupby('Party Name')['Total Pcs'].sum()
-                party_groups = party_groups[party_groups > 0]
+                parties = f_df.groupby('Party Name')['Total Pcs'].sum()
+                parties = parties[parties > 0] # 0 Hide
                 
                 c1, c2 = st.columns(2)
                 with c1:
-                    st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
-                    st.write("### 🏭 ITEM SUMMARY")
-                    st.table(item_groups.reset_index())
-                    st.markdown('</div>', unsafe_allow_html=True)
+                    st.write("### 🏭 Item Summary")
+                    st.table(items.reset_index())
                 with c2:
-                    st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
-                    st.write("### 📦 PARTY SUMMARY")
-                    st.table(party_groups.reset_index())
-                    st.markdown('</div>', unsafe_allow_html=True)
+                    st.write("### 📦 Party Summary")
+                    st.table(parties.reset_index())
             else:
-                st.warning("No data found for this selection.")
+                st.info("No data.")
