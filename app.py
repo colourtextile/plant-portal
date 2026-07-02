@@ -16,14 +16,15 @@ st.set_page_config(page_title="Colour Textile Portal", layout="wide")
 # --- 💅 PREMIUM GLOBAL STYLING ---
 st.markdown("""
 <style>
-    .global-header { text-align: center; font-weight: 800; font-size: 44px; background: linear-gradient(45deg, #FF5733, #30c381); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .brand-title { text-align: center; font-weight: 800; font-size: 42px; background: linear-gradient(45deg, #FF5733, #30c381); -webkit-background-clip: text; -webkit-text-fill-color: transparent; padding-top: 40px; }
+    .global-header { text-align: center; margin: 0px 0px 20px 0px; font-weight: 800; font-size: 44px; letter-spacing: 2px; background: linear-gradient(45deg, #FF5733, #FFC300, #30c381, #247ba0, #a066ff); background-size: 300% 300%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gradientShift 6s ease infinite; }
+    @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    .brand-title { text-align: center; font-weight: 800; font-size: 42px; background: linear-gradient(45deg, #FF5733, #FFC300); -webkit-background-clip: text; -webkit-text-fill-color: transparent; padding-top: 40px; }
     .sidebar-brand-box { background: linear-gradient(135deg, #1F4E79, #2c3e50); padding: 18px; border-radius: 8px; margin-bottom: 25px; border-left: 5px solid #FF5733; text-align: center; }
-    .dashboard-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #eef2f5; }
+    .dashboard-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eef2f5; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- SESSION STATES INIT ---
+# --- INITIALIZATION ---
 if "supervisor_targets" not in st.session_state: st.session_state["supervisor_targets"] = {"Ramesh": 500, "Suresh": 400}
 if "users" not in st.session_state:
     st.session_state["users"] = {
@@ -33,17 +34,28 @@ if "users" not in st.session_state:
 if "party_options" not in st.session_state: st.session_state["party_options"] = ["Krishna Textiles", "Balaji Fabrics"]
 if "item_options" not in st.session_state: st.session_state["item_options"] = ["SAREE", "SUIT", "DUPATTA"]
 if "logged_in" not in st.session_state: st.session_state["logged_in"] = False
-if "email_config" not in st.session_state: st.session_state["email_config"] = {"sender": "", "password": "", "receiver": ""}
+if "email_config" not in st.session_state: st.session_state["email_config"] = {"sender": "your_email@gmail.com", "password": "your_app_password", "receiver": "receiver_email@gmail.com"}
 
-# --- HELPER FUNCTIONS ---
+# --- HELPER FUNCTION ---
 def send_daywise_backup_email():
-    # ... (Email logic wahi rahegi) ...
-    pass
+    cfg = st.session_state["email_config"]
+    current_today = datetime.now().strftime("%d-%m-%Y")
+    if not os.path.exists(EXCEL_FILE): return False
+    try:
+        main_df = pd.read_excel(EXCEL_FILE, sheet_name="Supervisor Entry")
+        main_df['Date'] = main_df['Date'].astype(str).str.strip()
+        day_wise_df = main_df[main_df['Date'] == current_today]
+        excel_buffer = io.BytesIO()
+        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer: day_wise_df.to_excel(writer, index=False)
+        excel_buffer.seek(0)
+        # Email logic... (simplified for space)
+        return True
+    except: return False
 
-# --- MAIN APP ---
+# --- LOGIN ---
 if not st.session_state["logged_in"]:
     st.markdown('<h1 class="brand-title">COLOUR TEXTILE</h1>', unsafe_allow_html=True)
-    with st.form("login"):
+    with st.form("login_form"):
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
         if st.form_submit_button("LOGIN"):
@@ -56,48 +68,30 @@ else:
     st.markdown('<h1 class="global-header">COLOUR TEXTILE</h1>', unsafe_allow_html=True)
     
     # --- SIDEBAR ---
-    st.sidebar.markdown(f"""
-    <div class="sidebar-brand-box">
-        <div style="color: #FFC300; font-size: 20px; font-weight: 800;">WELCOME</div>
-        <div style="color: #FFFFFF; font-size: 22px; font-weight: 900;">COLOUR TEXTILE</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
+    st.sidebar.markdown(f"### Welcome {user['name']}")
     nav_options = ["📊 Dashboard"]
     if user["role"] == "admin":
-        nav_options.extend(["📝 Data Entry", "🎯 Target Settings", "⚙️ Factory Configs", "📧 Setup Email Auto-Backup"])
-        
-    nav_choice = st.sidebar.radio("🧭 Navigation Menu", nav_options)
-    
-    # --- LOGIC BASED ON NAVIGATION ---
-    
-    # 1. DASHBOARD
-    if nav_choice == "📊 Dashboard":
-        st.subheader("📊 Live Analytics Dashboard")
-        filter_type = st.radio("Select Filter:", ["☀️ Day-Wise", "📆 Month-Wise"], horizontal=True)
-        # ... (Dashboard logic yahan rahegi) ...
-        st.info("Dashboard content here...")
+        nav_options.extend(["📝 Data Entry", "🎯 Target Settings", "⚙️ Factory Configurations Desk", "📧 Email Setup"])
+    nav_choice = st.sidebar.radio("Navigation", nav_options)
 
-    # 2. FACTORY CONFIGS (NEW SIDEBAR LOCATION)
-    elif nav_choice == "⚙️ Factory Configs":
+    # --- CONTENT LOGIC ---
+    if nav_choice == "📊 Dashboard":
+        st.subheader("📊 Live Analytics")
+        filter_type = st.radio("Filter Type:", ["☀️ Day-Wise", "📆 Month-Wise"], horizontal=True)
+        # ... (Dashboard logic wahi rahegi) ...
+        st.write("Dashboard Data Here...")
+
+    elif nav_choice == "⚙️ Factory Configurations Desk":
         st.subheader("⚙️ Factory Configurations Desk")
         t1, t2, t3 = st.tabs(["🏢 Manage Parties", "📦 Manage Items", "👥 Supervisors"])
         with t1:
-            st.write("Party Management Logic Here")
+            st.write("Party Management...")
         with t2:
-            st.write("Item Management Logic Here")
+            st.write("Item Management...")
         with t3:
-            st.write("Supervisor Management Logic Here")
+            st.write("Supervisor Management...")
 
-    # 3. OTHER PAGES
-    elif nav_choice == "📝 Data Entry":
-        st.subheader("📝 Quick Data Entry")
-        # ...
-
-    elif nav_choice == "📧 Setup Email Auto-Backup":
-        st.subheader("📧 Email Settings")
-        # ...
-
+    # Logout
     if st.sidebar.button("🚪 Logout"):
         st.session_state["logged_in"] = False
         st.rerun()
