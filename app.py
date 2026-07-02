@@ -23,41 +23,63 @@ st.set_page_config(page_title="Colour Textile Portal", layout="wide")
 
 # --- 🎨 SAREE WEAVING BACKGROUND IMAGES ---
 textile_bg_images = [
-    "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?q=80&w=1920&auto=format&fit=crop", # Silk threads weaving / texture
-    "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=1920&auto=format&fit=crop", # Colorful yarn spools for saree
-    "https://images.unsplash.com/photo-1606744824163-985d376605aa?q=80&w=1920&auto=format&fit=crop"  # Indian ethnic fabric weaving texture
+    "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?q=80&w=1920&auto=format&fit=crop", 
+    "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=1920&auto=format&fit=crop", 
+    "https://images.unsplash.com/photo-1606744824163-985d376605aa?q=80&w=1920&auto=format&fit=crop"  
 ]
 selected_bg = random.choice(textile_bg_images)
 
-# --- 💅 ULTRA PREMIUM ALL-IN-ONE CARD LOGIN CSS ---
+# --- 💅 STYLING TO CONTAIN INPUTS INSIDE THE CARD PERFECTLY ---
 st.markdown(f"""
 <style>
     .reportview-container {{
         background: #f8f9fa;
     }}
     
-    /* Perfect Fixed Width Integrated Login Card */
+    /* Center aligning everything and forcing login box width */
+    .login-wrapper {{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin-top: 5%;
+    }}
+
     .login-master-card {{
         background-color: rgba(255, 255, 255, 0.98);
-        padding: 35px 30px;
+        padding: 40px 35px;
         border-radius: 16px;
-        box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.45);
+        box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.5);
         width: 380px;
-        margin: 5% auto;
-        border-top: 6px solid #FF5733; /* Vibrant Industry Border */
+        border-top: 6px solid #FF5733;
         font-family: 'Segoe UI', Arial, sans-serif;
     }}
     
-    /* Text Labels Color Overwrite for 100% Visibility */
+    /* Dynamic Multi-color Gradient Textile Brand text */
+    .brand-title {{
+        text-align: center; 
+        margin: 0px; 
+        font-weight: 800; 
+        font-size: 28px; 
+        letter-spacing: 1px;
+        background: linear-gradient(45deg, #f35626, #feab3a, #30c381, #247ba0, #a066ff);
+        background-size: 400% 400%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: gradientGradient 8s ease infinite;
+    }}
+    
+    @keyframes gradientGradient {{
+        0% {{ background-position: 0% 50%; }}
+        50% {{ background-position: 100% 50%; }}
+        100% {{ background-position: 0% 50%; }}
+    }}
+
+    /* Fixing label typography inside card container */
     .login-master-card label {{
         color: #2C3E50 !important;
         font-weight: 600 !important;
         font-size: 13px !important;
-    }}
-    
-    .logo-container {{
-        text-align: center;
-        margin-bottom: 12px;
     }}
     
     .dashboard-card {{
@@ -67,12 +89,6 @@ st.markdown(f"""
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         margin-bottom: 20px;
         border: 1px solid #eef2f5;
-    }}
-    
-    /* Completely cleaning the inner form borders */
-    div[data-testid="stForm"] {{
-        border: none !important;
-        padding: 0 !important;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -140,7 +156,7 @@ if not st.session_state["logged_in"]:
     st.markdown(f"""
     <style>
         .stApp {{
-            background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url("{selected_bg}");
+            background-image: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)), url("{selected_bg}");
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -148,41 +164,35 @@ if not st.session_state["logged_in"]:
     </style>
     """, unsafe_allow_html=True)
     
-    # Everything cleanly integrated inside the master card HTML block
-    st.markdown(f'''
-    <div class="login-master-card">
-        <div class="logo-container">
-            <!-- Modern Loom / Saree Weave Dynamic Diamond Logo -->
-            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L2 12L12 22L22 12L12 2Z" stroke="#FF5733" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12 6L6 12L12 18L18 12L12 6Z" fill="#1F4E79"/>
-                <circle cx="12" cy="12" r="2" fill="#FFFF00"/>
-            </svg>
-        </div>
-        <h2 style="text-align: center; margin: 0px; font-weight: 800; font-size:24px; letter-spacing: 0.5px; color: #2C3E50;">
-            <span style="background: linear-gradient(45deg, #FF5733, #FFC300); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">COLOUR</span> TEXTILE
-        </h2>
-        <p style="text-align: center; color: #7F8C8D; font-size: 11px; margin-top: 5px; margin-bottom: 25px; font-weight: 500;">
-            SAREE WEAVING & PRODUCTION ERP
-        </p>
-    ''', unsafe_allow_html=True)
+    # 3 columns used to lock the entire form layout strictly within 380px wide box
+    col_v1, col_v2, col_v3 = st.columns([1, 0.8, 1])
     
-    # Form elements inside the clean White background wrapper
-    with st.form("login_form", clear_on_submit=False):
-        username = st.text_input("Username / ID", placeholder="Enter your ID")
-        password = st.text_input("Password", type="password", placeholder="••••••••")
-        st.markdown("<br>", unsafe_allow_html=True)
-        submit_login = st.form_submit_button("SECURE SYSTEM LOGIN", use_container_width=True)
+    with col_v2:
+        st.markdown('<div class="login-wrapper">', unsafe_allow_html=True)
+        st.markdown(f'''
+        <div class="login-master-card">
+            <h2 class="brand-title">COLOUR TEXTILE</h2>
+            <p style="text-align: center; color: #7F8C8D; font-size: 11px; margin-top: 5px; margin-bottom: 25px; font-weight: 500; letter-spacing: 0.5px;">
+                SAREE WEAVING & PRODUCTION ERP
+            </p>
+        ''', unsafe_allow_html=True)
         
-        if submit_login:
-            if username.strip() in st.session_state["users"] and st.session_state["users"][username.strip()]["password"] == password.strip():
-                st.session_state["logged_in"] = True
-                st.session_state["current_user"] = st.session_state["users"][username.strip()]
-                st.rerun()
-            else:
-                st.error("❌ Invalid ID or Password")
-                
-    st.markdown('</div>', unsafe_allow_html=True)
+        # Placing inputs cleanly inside the card layout scope
+        with st.form("login_form", clear_on_submit=False):
+            username = st.text_input("Username / ID", placeholder="Enter your ID")
+            password = st.text_input("Password", type="password", placeholder="••••••••")
+            st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
+            submit_login = st.form_submit_button("SECURE SYSTEM LOGIN", use_container_width=True)
+            
+            if submit_login:
+                if username.strip() in st.session_state["users"] and st.session_state["users"][username.strip()]["password"] == password.strip():
+                    st.session_state["logged_in"] = True
+                    st.session_state["current_user"] = st.session_state["users"][username.strip()]
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid ID or Password")
+                    
+        st.markdown('</div></div>', unsafe_allow_html=True)
 
 # --- 👑 MAIN PORTAL SCREEN (AFTER LOGIN) ---
 else:
@@ -203,7 +213,7 @@ else:
                 elif df.shape[1] == 9:
                     df.columns = ["Date", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor", "Challan No"]
                 
-                # Challan Column Date ke baju me Locked
+                # Challan Column Date ke Baju me Locked structure
                 ordered_cols = ["Date", "Challan No", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor"]
                 df = df[ordered_cols]
                 excel_loaded = True
@@ -337,7 +347,7 @@ else:
             items_list = [it.upper().strip() for it in st.session_state["item_options"]]
             current_date = datetime.now().strftime("%d-%m-%y")
 
-            # --- METRICS AND CHARTS ---
+            # --- DASHBOARD METRICS ---
             col_left, col_right = st.columns([1, 1.2])
             
             with col_left:
@@ -398,12 +408,12 @@ else:
                     st.info("No data recorded yet.")
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            # --- DATAFRAME VIEW ---
+            # --- LIVE MASTER DATAFRAME VIEW ---
             st.markdown("---")
             st.subheader("📋 Production Master Logs (Date & Challan Locked)")
             st.dataframe(df, hide_index=True, use_container_width=True, height=250)
 
-            # --- MANAGEMENT TABS ---
+            # --- FACTORY MASTER SYSTEM TABS ---
             st.markdown("---")
             st.subheader("⚙️ Factory Configurations Desk")
             t1, t2, t3 = st.tabs(["🏢 Manage Parties", "📦 Manage Items", "👥 Supervisors Accounts"])
