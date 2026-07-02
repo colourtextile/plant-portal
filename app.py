@@ -1,14 +1,3 @@
-Aapki requirements ke mutabik maine dashboard me ekdum professional **Dual Filter System (Day-Wise aur Month-Wise)** add kar diya hai!
-
-### ✨ Is Update Me Kya Naya Hai:
-
-1. **📅 Dual Filter Toggle:** Ab aap dashboard par ek radio button se chun sakte hain ki aapko **Day-Wise (Khas Din ka)** data dekhna hai ya fir **Month-Wise (Pure Mahine ka)** data dekhna hai.
-2. **☀️ Day-Wise Filter:** Isko select karne par aap calendar se koi bhi ek date chun sakte hain aur us din ka *Production Summary Box* aur *Round Graph* turant update ho jayega.
-3. **📆 Month-Wise Filter:** Isko select karne par ek dynamic dropdown aayega jo aapki Excel sheet me se automatic saare Months (jaise *July 2026*, *August 2026*) utha lega. Ise select karte hi pure mahine ki total production summary aur round graph live display ho jayenge!
-4. **🔄 Dynamic UI Titles:** Yellow aur Blue production report boxes par selected filter ke hisab se automatic change hoke **"SELECTED DATE"** ya **"SELECTED MONTH"** likha hua aayega.
-
-Yahan aapka completely updated aur tested code hai, ise copy karke `app.py` me badal lijiye:
-
 ```python
 import streamlit as st
 import pandas as pd
