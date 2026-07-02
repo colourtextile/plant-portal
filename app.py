@@ -646,12 +646,27 @@ else:
 
                 if can_view_logs:
                     st.markdown("---")
-                    st.subheader("📋 Your Done Production Entries")
+                    st.subheader("📋 Your Production Entries")
                     sup_df = df[df["Supervisor"] == user["name"]] if excel_loaded else pd.DataFrame()
                     
                     if not sup_df.empty:
+                        # AGAR EDIT KI PERMISSION HAI TOH DATA_EDITOR USE KAREIN
                         if can_edit_logs:
-                            st.data_editor(sup_df, hide_index=True, use_container_width=True)
+                            st.info("Tip: Kisi bhi cell par click karke change karein. Row select karke 'Delete' dabayein.")
+                            
+                            # Data editor se user edited dataframe wapas milega
+                            updated_sup_df = st.data_editor(sup_df, num_rows="dynamic", use_container_width=True)
+                            
+                            if st.button("💾 Save Changes"):
+                                # 1. Purane data ko update karna
+                                # Original full dataframe (df) mein se supervisor ke entries hata kar naye updated_sup_df ko jodna
+                                df_rest = df[df["Supervisor"] != user["name"]]
+                                final_df = pd.concat([df_rest, updated_sup_df], ignore_index=True)
+                                
+                                # 2. Excel mein save karna
+                                final_df.to_excel(EXCEL_FILE, index=False)
+                                st.success("✅ Records updated successfully!")
+                                st.rerun()
                         else:
                             st.dataframe(sup_df, hide_index=True, use_container_width=True)
             else:
