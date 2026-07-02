@@ -24,17 +24,13 @@ st.set_page_config(page_title="Plant Production Portal", layout="wide")
 def send_excel_backup_email():
     if not os.path.exists(EXCEL_FILE):
         return
-    
     try:
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
-        
-        # Create Message
         msg = MIMEMultipart()
         msg['From'] = EMAIL_SENDER
         msg['To'] = EMAIL_RECEIVER
         msg['Subject'] = f"🔄 AUTOMATIC BACKUP: Plant Production Data ({current_time})"
         
-        # Attach File
         with open(EXCEL_FILE, "rb") as attachment:
             part = MIMEBase("application", "octet-stream")
             part.set_payload(attachment.read())
@@ -45,33 +41,25 @@ def send_excel_backup_email():
             )
             msg.attach(part)
             
-        # Connect and Send via Gmail SMTP
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
         server.login(EMAIL_SENDER, EMAIL_PASSWORD)
         server.send_message(msg)
         server.quit()
-        print(f"✅ Backup successfully sent at {current_time}")
     except Exception as e:
-        print(f"❌ Backup failed: {str(e)}")
+        pass
 
 # --- 🕒 SCHEDULER: DIN ME 5 BAAR AUTOMATIC RUN ---
-# Yeh ensure karega ki scheduler sirf ek baar initialize ho jab server start ho
 if "scheduler_started" not in st.session_state:
     scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
-    
-    # Din me 5 baar ka time set kiya hai (Aap apne hisab se hours badal sakte hain)
-    # 1. Subah 10:00 baje | 2. Dopahar 1:00 baje | 3. Shaam 4:00 baje | 4. Raat 7:00 baje | 5. Raat 10:00 baje
     backup_hours = [10, 13, 16, 19, 22] 
-    
     for hr in backup_hours:
         scheduler.add_job(send_excel_backup_email, 'cron', hour=hr, minute=0)
-        
     scheduler.start()
     st.session_state["scheduler_started"] = True
     atexit.register(lambda: scheduler.shutdown())
 
-# 1. INITIALIZING DATA STRUCTURES
+# INITIALIZING DATA STRUCTURES
 if "users" not in st.session_state:
     st.session_state["users"] = {
         "admin": {"password": "plant123", "name": "Admin Master", "role": "admin"},
@@ -90,7 +78,7 @@ if "logged_in" not in st.session_state:
 if "current_user" not in st.session_state:
     st.session_state["current_user"] = None
 
-# 2. LOGIN SCREEN
+# MAIN APPLICATION (AFTER LOGIN)
 if not st.session_state["logged_in"]:
     st.markdown("<h2 style='text-align: center; color: #1F4E79;'>🔐 Plant Portal - Secure Login</h2>", unsafe_allow_html=True)
     with st.form("login_form"):
@@ -103,8 +91,6 @@ if not st.session_state["logged_in"]:
                 st.rerun()
             else:
                 st.error("❌ Galat ID ya Password!")
-
-# 3. MAIN APPLICATION (AFTER LOGIN)
 else:
     user = st.session_state["current_user"]
     
@@ -124,40 +110,63 @@ else:
                 elif df.shape[1] == 9:
                     df.columns = ["Date", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor", "Challan No"]
                 excel_loaded = True
-        except Exception as e:
+        except:
             pass
 
-    # REPORT GENERATOR IN SIDEBAR
+    # --- 📊 ADVANCED REPORTS CENTER IN SIDEBAR (All Options Included) ---
     if user["role"] == "admin" and excel_loaded and not df.empty:
         st.sidebar.markdown("---")
-        st.sidebar.markdown("### 📊 Download Reports")
-        
-        all_parties = ["All Parties"] + sorted(list(df["Party Name"].dropna().unique()))
-        all_designs = ["All Designs"] + sorted(list(df["Design No"].dropna().astype(str).unique()))
-        
-        filter_party = st.sidebar.selectbox("Filter by Party", all_parties)
-        filter_design = st.sidebar.selectbox("Filter by Design", all_designs)
-        
-        filtered_df = df.copy()
-        if filter_party != "All Parties":
-            filtered_df = filtered_df[filtered_df["Party Name"] == filter_party]
-        if filter_design != "All Designs":
-            filtered_df = filtered_df[filtered_df["Design No"] == filter_design]
+        with st.sidebar.expander("📊 Advanced Reports Center", expanded=False):
+            st.markdown("<small>Sabhi options se data filter karein:</small>", unsafe_allow_html=True)
             
-        st.sidebar.markdown(f"Found Rows: `{len(filtered_df)}`")
-        
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            filtered_df.to_excel(writer, sheet_name='Filtered Report', index=False)
-        
-        st.sidebar.download_button(
-            label="📥 Download Excel Report",
-            data=buffer.getvalue(),
-            file_name=f"Report_{filter_party}_{filter_design}_{datetime.now().strftime('%d-%m')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+            # Options list extraction from existing data
+            all_parties = ["All Parties"] + sorted(list(df["Party Name"].dropna().unique()))
+            all_designs = ["All Designs"] + sorted(list(df["Design No"].dropna().astype(str).unique()))
+            all_items = ["All Items"] + sorted(list(df["Item Type"].dropna().unique()))
+            all_supervisors = ["All Supervisors"] + sorted(list(df["Supervisor"].dropna().unique()))
+            all_challans = ["All Challans"] + sorted(list(df["Challan No"].dropna().astype(str).unique()))
+            
+            # Form elements inside sidebar
+            filter_party = st.selectbox("1. Filter by Party", all_parties)
+            filter_design = st.selectbox("2. Filter by Design No", all_designs)
+            filter_item = st.selectbox("3. Filter by Item Type", all_items)
+            filter_supervisor = st.selectbox("4. Filter by Supervisor", all_supervisors)
+            filter_challan = st.selectbox("5. Filter by Challan No", all_challans)
+            
+            # Filtering Logic
+            filtered_df = df.copy()
+            if filter_party != "All Parties":
+                filtered_df = filtered_df[filtered_df["Party Name"] == filter_party]
+            if filter_design != "All Designs":
+                filtered_df = filtered_df[filtered_df["Design No"].astype(str) == filter_design]
+            if filter_item != "All Items":
+                filtered_df = filtered_df[filtered_df["Item Type"] == filter_item]
+            if filter_supervisor != "All Supervisors":
+                filtered_df = filtered_df[filtered_df["Supervisor"] == filter_supervisor]
+            if filter_challan != "All Challans":
+                filtered_df = filtered_df[filtered_df["Challan No"].astype(str) == filter_challan]
+                
+            # Quick Stats inside sidebar
+            tot_filtered_pcs = filtered_df["Total Pcs"].sum() if not filtered_df.empty else 0
+            st.markdown(f"""
+            <div style="background-color: #f1f3f4; padding: 8px; border-radius: 4px; margin-bottom: 10px;">
+                <p style="margin:0; font-size:12px; color:#5f6368;">Found Rows: <b>{len(filtered_df)}</b></p>
+                <p style="margin:0; font-size:12px; color:#5f6368;">Total Selected Pcs: <b>{tot_filtered_pcs:,}</b></p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Export to Excel buffer
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                filtered_df.to_excel(writer, sheet_name='Filtered Report', index=False)
+            
+            st.download_button(
+                label="📥 Download Filtered Excel",
+                data=buffer.getvalue(),
+                file_name=f"Advanced_Report_{datetime.now().strftime('%d-%m-%Y')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
-    # Manual Backup Button for Admin
     if user["role"] == "admin":
         st.sidebar.markdown("---")
         if st.sidebar.button("📧 Send Backup to Mail Now"):
@@ -174,7 +183,6 @@ else:
     if not os.path.exists(EXCEL_FILE):
         st.error(f"Excel file '{EXCEL_FILE}' nahi mili! Kripya check karein.")
     else:
-        # --- ROLE 1: SUPERVISOR ---
         if user["role"] == "supervisor":
             st.title("📝 Supervisor Data Entry Portal")
             with st.form("entry_form_sup", clear_on_submit=True):
@@ -201,7 +209,6 @@ else:
                         st.success("🎉 Entry Saved Successfully with Challan!")
                         st.rerun()
 
-        # --- ROLE 2: ADMIN ALL-IN-ONE DESKBOARD ---
         elif user["role"] == "admin":
             st.title("👑 Admin Master Deskboard")
             
@@ -240,41 +247,39 @@ else:
             items_list = [it.upper().strip() for it in st.session_state["item_options"]]
             current_date = datetime.now().strftime("%d-%m-%y")
 
-            # --- SCREEN COLUMNS FOR GRAPH AND BEAUTIFUL TABLE ---
+            # --- SCREEN COLUMNS FOR GRAPH AND NEW FIXED COLOR CODES ---
             col_left, col_right = st.columns([1, 1.2])
             
             with col_left:
                 st.subheader("📊 Live Summary Table")
                 
-                html_table = f"""
-                <div style="border: 2px solid #000000; border-radius: 4px; overflow: hidden; font-family: Arial, sans-serif;">
-                    <div style="background-color: #FFFF00; color: #000000; text-align: center; font-weight: bold; padding: 10px; font-size: 18px; border-bottom: 2px solid #000000;">
-                        PRODUCTION
-                    </div>
-                    <div style="background-color: #4F81BD; color: #FFFFFF; display: flex; justify-content: space-between; font-weight: bold; padding: 8px 15px; font-size: 15px; border-bottom: 1px solid #000000;">
-                        <span>DATE</span>
-                        <span>{current_date}</span>
-                    </div>
-                """
+                st.markdown(f"""
+                <div style="background-color: #FFFF00; color: #000000; text-align: center; font-weight: bold; padding: 10px; font-size: 18px; border: 2px solid #000000; border-bottom: none; border-radius: 4px 4px 0px 0px;">
+                    PRODUCTION
+                </div>
+                <div style="background-color: #4F81BD; color: #FFFFFF; padding: 10px; font-weight: bold; font-size: 15px; border-left: 2px solid #000000; border-right: 2px solid #000000; border-bottom: 2px solid #000000; display: flex; justify-content: space-between;">
+                    <span>DATE</span>
+                    <span>{current_date}</span>
+                </div>
+                """, unsafe_allow_html=True)
+                
                 total_sum = 0
                 for it in items_list:
                     val = item_groups.get(it, 0)
                     total_sum += val
-                    html_table += f"""
-                    <div style="background-color: #FFFFFF; color: #000000; display: flex; justify-content: space-between; padding: 8px 15px; font-size: 14px; border-bottom: 1px solid #E0E0E0;">
+                    st.markdown(f"""
+                    <div style="background-color: #FFFFFF; color: #000000; padding: 8px 12px; font-size: 14px; border-left: 2px solid #000000; border-right: 2px solid #000000; border-bottom: 1px solid #E0E0E0; display: flex; justify-content: space-between;">
                         <span>{it}</span>
                         <span style="font-weight: bold;">{val:,}</span>
                     </div>
-                    """
+                    """, unsafe_allow_html=True)
                 
-                html_table += f"""
-                    <div style="background-color: #F2F2F2; color: #000000; display: flex; justify-content: space-between; font-weight: bold; padding: 10px 15px; font-size: 16px; border-top: 2px solid #000000;">
-                        <span>TOTAL PCS</span>
-                        <span style="color: #000000; text-decoration: underline;">{total_sum:,}</span>
-                    </div>
+                st.markdown(f"""
+                <div style="background-color: #2ECC71; color: #FFFFFF; padding: 10px 12px; font-weight: bold; font-size: 16px; border: 2px solid #000000; border-radius: 0px 0px 4px 4px; display: flex; justify-content: space-between;">
+                    <span>TOTAL PCS</span>
+                    <span style="text-decoration: underline; font-size: 17px;">{total_sum:,}</span>
                 </div>
-                """
-                st.markdown(html_table, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
                 
             with col_right:
                 st.subheader("🍩 Item Wise Percentage Graph")
@@ -371,7 +376,6 @@ else:
             # TAB 3: SUPERVISOR ACCOUNTS
             with t3:
                 col_u1, col_u2, col_u3 = st.columns(3)
-                
                 with col_u1:
                     st.markdown("**➕ Add New Supervisor**")
                     with st.form("add_user_form", clear_on_submit=True):
@@ -397,7 +401,6 @@ else:
                     if sups_only:
                         selected_sup = st.selectbox("Select ID to Edit", sups_only, key="sel_sup_edt")
                         current_sup_data = st.session_state["users"][selected_sup]
-                        
                         edit_name = st.text_input("Change Full Name", value=current_sup_data["name"])
                         edit_pass = st.text_input("Change Password", value=current_sup_data["password"])
                         
