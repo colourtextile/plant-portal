@@ -14,46 +14,52 @@ import random
 
 EXCEL_FILE = "Final_Plant_System_With_All_Dropdowns.xlsx"
 
-# --- 📧 EMAIL CONFIGURATION (Apna Details Yahan Bharein) ---
+# --- 📧 EMAIL CONFIGURATION ---
 EMAIL_SENDER = "aapka_gmail@gmail.com"
 EMAIL_PASSWORD = "xxxx xxxx xxxx xxxx"       
 EMAIL_RECEIVER = "aapka_mail@gmail.com"      
 
-st.set_page_config(page_title="Textile Production Portal", layout="wide")
+st.set_page_config(page_title="Colour Textile Portal", layout="wide")
 
-# --- 🎨 CUSTOM CSS FOR PROFESSIONAL ULTRA-COMPACT UI & LOGO ---
+# --- 🎨 SAREE WEAVING BACKGROUND IMAGES ---
 textile_bg_images = [
-    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1920&auto=format&fit=crop", 
-    "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=1920&auto=format&fit=crop", 
-    "https://images.unsplash.com/photo-1524295981-9a7ba6d322b2?q=80&w=1920&auto=format&fit=crop"  
+    "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?q=80&w=1920&auto=format&fit=crop", # Silk threads weaving / texture
+    "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=1920&auto=format&fit=crop", # Colorful yarn spools for saree
+    "https://images.unsplash.com/photo-1606744824163-985d376605aa?q=80&w=1920&auto=format&fit=crop"  # Indian ethnic fabric weaving texture
 ]
 selected_bg = random.choice(textile_bg_images)
 
+# --- 💅 ULTRA PREMIUM ALL-IN-ONE CARD LOGIN CSS ---
 st.markdown(f"""
 <style>
     .reportview-container {{
         background: #f8f9fa;
     }}
     
-    /* Login Main Container Box - Ultra Compact Width */
-    .login-box-wrapper {{
+    /* Perfect Fixed Width Integrated Login Card */
+    .login-master-card {{
         background-color: rgba(255, 255, 255, 0.98);
-        padding: 30px 25px;
-        border-radius: 14px;
-        box-shadow: 0px 15px 35px rgba(0, 0, 0, 0.35);
-        width: 340px;
-        margin: 7% auto 0px auto;
-        border-top: 6px solid #1F4E79;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 35px 30px;
+        border-radius: 16px;
+        box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.45);
+        width: 380px;
+        margin: 5% auto;
+        border-top: 6px solid #FF5733; /* Vibrant Industry Border */
+        font-family: 'Segoe UI', Arial, sans-serif;
     }}
     
-    /* Logo Wrapper Styles */
+    /* Text Labels Color Overwrite for 100% Visibility */
+    .login-master-card label {{
+        color: #2C3E50 !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+    }}
+    
     .logo-container {{
         text-align: center;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
     }}
     
-    /* Premium Dashboard Layout Boxes */
     .dashboard-card {{
         background: white;
         padding: 20px;
@@ -63,7 +69,7 @@ st.markdown(f"""
         border: 1px solid #eef2f5;
     }}
     
-    /* Shrinking default Streamlit padding inside the small login layout */
+    /* Completely cleaning the inner form borders */
     div[data-testid="stForm"] {{
         border: none !important;
         padding: 0 !important;
@@ -100,7 +106,7 @@ def send_excel_backup_email():
     except:
         pass
 
-# --- 🕒 SCHEDULER: DIN ME 5 BAAR AUTOMATIC RUN ---
+# --- 🕒 SCHEDULER ---
 if "scheduler_started" not in st.session_state:
     scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
     backup_hours = [10, 13, 16, 19, 22] 
@@ -129,12 +135,12 @@ if "logged_in" not in st.session_state:
 if "current_user" not in st.session_state:
     st.session_state["current_user"] = None
 
-# --- 🔒 MAIN APPLICATION (LOGIN SCREEN CONVERTED TO TEXTILE THEME) ---
+# --- 🔒 MAIN APPLICATION LOGIN SCREEN ---
 if not st.session_state["logged_in"]:
     st.markdown(f"""
     <style>
         .stApp {{
-            background-image: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url("{selected_bg}");
+            background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url("{selected_bg}");
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -142,50 +148,46 @@ if not st.session_state["logged_in"]:
     </style>
     """, unsafe_allow_html=True)
     
-    # 340px width ultra-controlled custom desktop alignment container
-    st.markdown('<div>', unsafe_allow_html=True)
-    st.markdown('''
-    <div class="login-box-wrapper">
+    # Everything cleanly integrated inside the master card HTML block
+    st.markdown(f'''
+    <div class="login-master-card">
         <div class="logo-container">
-            <!-- Professional Custom Thread/Spool Logo Mark -->
-            <svg width="55" height="55" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 18C8.69 18 6 15.31 6 12C6 8.69 8.69 6 12 6C15.31 6 18 8.69 18 12C18 15.31 15.31 18 12 18Z" fill="#1F4E79"/>
-                <path d="M12 8C9.79 8 8 9.79 8 12C8 14.21 9.79 16 12 16C14.21 16 16 14.21 16 12C16 9.79 14.21 8 12 8Z" fill="#27AE60"/>
-                <path d="M12 10.5C11.17 10.5 10.5 11.17 10.5 12C10.5 12.83 11.17 13.5 12 13.5C12.83 13.5 13.5 12.83 13.5 12C13.5 11.17 12.83 10.5 12 10.5Z" fill="#FFFF00"/>
+            <!-- Modern Loom / Saree Weave Dynamic Diamond Logo -->
+            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 12L12 22L22 12L12 2Z" stroke="#FF5733" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 6L6 12L12 18L18 12L12 6Z" fill="#1F4E79"/>
+                <circle cx="12" cy="12" r="2" fill="#FFFF00"/>
             </svg>
         </div>
-        <h3 style="text-align: center; margin: 0px; font-weight: 700; color: #2C3E50;">
-            SMART <span style="color: #1F4E79;">TEXTILE</span>
-        </h3>
-        <p style="text-align: center; color: #7F8C8D; font-size: 11px; margin-top: 4px; margin-bottom: 20px; letter-spacing: 0.5px;">
-            ERP MANUFACTURING PORTAL
+        <h2 style="text-align: center; margin: 0px; font-weight: 800; font-size:24px; letter-spacing: 0.5px; color: #2C3E50;">
+            <span style="background: linear-gradient(45deg, #FF5733, #FFC300); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">COLOUR</span> TEXTILE
+        </h2>
+        <p style="text-align: center; color: #7F8C8D; font-size: 11px; margin-top: 5px; margin-bottom: 25px; font-weight: 500;">
+            SAREE WEAVING & PRODUCTION ERP
         </p>
-    </div>
     ''', unsafe_allow_html=True)
     
-    # Forms and inputs placed cleanly inside an isolated container block
-    col_l1, col_l2, col_l3 = st.columns([1, 0.7, 1])
-    with col_l2:
-        with st.form("login_form", clear_on_submit=False):
-            username = st.text_input("Username / ID", placeholder="Enter ID")
-            password = st.text_input("Password", type="password", placeholder="••••••••")
-            st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-            submit_login = st.form_submit_button("SECURE LOGIN", use_container_width=True)
-            
-            if submit_login:
-                if username.strip() in st.session_state["users"] and st.session_state["users"][username.strip()]["password"] == password.strip():
-                    st.session_state["logged_in"] = True
-                    st.session_state["current_user"] = st.session_state["users"][username.strip()]
-                    st.rerun()
-                else:
-                    st.error("❌ Invalid Login")
+    # Form elements inside the clean White background wrapper
+    with st.form("login_form", clear_on_submit=False):
+        username = st.text_input("Username / ID", placeholder="Enter your ID")
+        password = st.text_input("Password", type="password", placeholder="••••••••")
+        st.markdown("<br>", unsafe_allow_html=True)
+        submit_login = st.form_submit_button("SECURE SYSTEM LOGIN", use_container_width=True)
+        
+        if submit_login:
+            if username.strip() in st.session_state["users"] and st.session_state["users"][username.strip()]["password"] == password.strip():
+                st.session_state["logged_in"] = True
+                st.session_state["current_user"] = st.session_state["users"][username.strip()]
+                st.rerun()
+            else:
+                st.error("❌ Invalid ID or Password")
+                
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 👑 MAIN PORTAL SCREEN (AFTER LOGIN) ---
 else:
     user = st.session_state["current_user"]
     
-    # --- SIDEBAR AREA ---
     st.sidebar.markdown(f"### 👤 Welcome, **{user['name']}**")
     st.sidebar.markdown(f"📋 Role: `{user['role'].upper()}`")
     
@@ -201,14 +203,14 @@ else:
                 elif df.shape[1] == 9:
                     df.columns = ["Date", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor", "Challan No"]
                 
-                # CHALLAN Baju me locked structure 
+                # Challan Column Date ke baju me Locked
                 ordered_cols = ["Date", "Challan No", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor"]
                 df = df[ordered_cols]
                 excel_loaded = True
         except:
             pass
 
-    # --- 📊 ADVANCED REPORTS CENTER IN SIDEBAR ---
+    # --- ADVANCED REPORTS ---
     if user["role"] == "admin" and excel_loaded and not df.empty:
         st.sidebar.markdown("---")
         with st.sidebar.expander("📊 Advanced Reports Center", expanded=False):
@@ -267,12 +269,12 @@ else:
         st.session_state["current_user"] = None
         st.rerun()
 
-    # --- MAIN SCREEN LOGICS ---
+    # --- CORE WORKSPACE DATA LOGICS ---
     if not os.path.exists(EXCEL_FILE):
-        st.error(f"Excel file '{EXCEL_FILE}' nahi mili! Kripya check karein.")
+        st.error(f"Excel file '{EXCEL_FILE}' nahi mili!")
     else:
         if user["role"] == "supervisor":
-            st.title("📝 Textile Supervisor Data Entry Panel")
+            st.title("📝 Colour Textile Production Entry Panel")
             with st.form("entry_form_sup", clear_on_submit=True):
                 col1, col2 = st.columns(2)
                 with col1:
@@ -298,7 +300,7 @@ else:
                         st.rerun()
 
         elif user["role"] == "admin":
-            st.markdown("<h1 style='color: #1F4E79; font-weight: bold;'>🏭 Textile Factory Master Control Room</h1>", unsafe_allow_html=True)
+            st.markdown("<h1 style='color: #1F4E79; font-weight: bold;'>🏭 Colour Textile Master Control Room</h1>", unsafe_allow_html=True)
             
             with st.expander("📝 Quick Data Entry Form (Admin View)", expanded=False):
                 with st.form("entry_form_admin", clear_on_submit=True):
@@ -335,7 +337,7 @@ else:
             items_list = [it.upper().strip() for it in st.session_state["item_options"]]
             current_date = datetime.now().strftime("%d-%m-%y")
 
-            # --- DUAL CORE LAYOUT ---
+            # --- METRICS AND CHARTS ---
             col_left, col_right = st.columns([1, 1.2])
             
             with col_left:
@@ -396,11 +398,12 @@ else:
                     st.info("No data recorded yet.")
                 st.markdown('</div>', unsafe_allow_html=True)
 
+            # --- DATAFRAME VIEW ---
             st.markdown("---")
             st.subheader("📋 Production Master Logs (Date & Challan Locked)")
             st.dataframe(df, hide_index=True, use_container_width=True, height=250)
 
-            # --- SYSTEM PANEL CONFIG ---
+            # --- MANAGEMENT TABS ---
             st.markdown("---")
             st.subheader("⚙️ Factory Configurations Desk")
             t1, t2, t3 = st.tabs(["🏢 Manage Parties", "📦 Manage Items", "👥 Supervisors Accounts"])
