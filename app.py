@@ -23,7 +23,7 @@ if "current_user" not in st.session_state:
 
 # LOGIN SCREEN
 if not st.session_state["logged_in"]:
-    st.markdown("<h2 style='text-align: center; color: #1F4E79;'>🔐 Plant Portal - Secure Login</h2>", unsafe_content_type=True)
+    st.markdown("<h2 style='text-align: center; color: #1F4E79;'>🔐 Plant Portal - Secure Login</h2>", unsafe_allow_html=True)
     with st.form("login_form"):
         username = st.text_input("Username / ID").strip()
         password = st.text_input("Password", type="password").strip()
