@@ -21,31 +21,36 @@ EMAIL_RECEIVER = "aapka_mail@gmail.com"
 
 st.set_page_config(page_title="Textile Production Portal", layout="wide")
 
-# --- 🎨 CUSTOM CSS FOR COMPACT PROFESSIONAL UI & TEXTILE SLIDES ---
-# Har login par random textile manufacturing images load hongi background me
+# --- 🎨 CUSTOM CSS FOR PROFESSIONAL ULTRA-COMPACT UI & LOGO ---
 textile_bg_images = [
-    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1920&auto=format&fit=crop", # Abstract fabric weaves
-    "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=1920&auto=format&fit=crop", # Yarns and threads
-    "https://images.unsplash.com/photo-1524295981-9a7ba6d322b2?q=80&w=1920&auto=format&fit=crop"  # Textile weaving machinery loom
+    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1920&auto=format&fit=crop", 
+    "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=1920&auto=format&fit=crop", 
+    "https://images.unsplash.com/photo-1524295981-9a7ba6d322b2?q=80&w=1920&auto=format&fit=crop"  
 ]
 selected_bg = random.choice(textile_bg_images)
 
 st.markdown(f"""
 <style>
-    /* Global Dashboard Clean look */
     .reportview-container {{
         background: #f8f9fa;
     }}
     
-    /* Login Box Styling - Center & Compact */
-    .login-container {{
-        background-color: rgba(255, 255, 255, 0.95);
-        padding: 2.5rem;
-        border-radius: 12px;
-        box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.3);
-        max-width: 400px;
-        margin: 6% auto;
-        border-top: 5px solid #1F4E79;
+    /* Login Main Container Box - Ultra Compact Width */
+    .login-box-wrapper {{
+        background-color: rgba(255, 255, 255, 0.98);
+        padding: 30px 25px;
+        border-radius: 14px;
+        box-shadow: 0px 15px 35px rgba(0, 0, 0, 0.35);
+        width: 340px;
+        margin: 7% auto 0px auto;
+        border-top: 6px solid #1F4E79;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }}
+    
+    /* Logo Wrapper Styles */
+    .logo-container {{
+        text-align: center;
+        margin-bottom: 10px;
     }}
     
     /* Premium Dashboard Layout Boxes */
@@ -56,6 +61,12 @@ st.markdown(f"""
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         margin-bottom: 20px;
         border: 1px solid #eef2f5;
+    }}
+    
+    /* Shrinking default Streamlit padding inside the small login layout */
+    div[data-testid="stForm"] {{
+        border: none !important;
+        padding: 0 !important;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -120,11 +131,10 @@ if "current_user" not in st.session_state:
 
 # --- 🔒 MAIN APPLICATION (LOGIN SCREEN CONVERTED TO TEXTILE THEME) ---
 if not st.session_state["logged_in"]:
-    # Full page textile background injection
     st.markdown(f"""
     <style>
         .stApp {{
-            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("{selected_bg}");
+            background-image: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url("{selected_bg}");
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -132,24 +142,43 @@ if not st.session_state["logged_in"]:
     </style>
     """, unsafe_allow_html=True)
     
-    # Chota aur Compact Centered Login Form Layout
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
-    st.markdown("<h2 style='text-align: center; color: #1F4E79; margin-bottom: 5px; font-family: sans-serif;'>🧵 TEXTILE ERP</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #666; font-size:13px; margin-bottom: 25px;'>Manufacturing Management System</p>", unsafe_allow_html=True)
+    # 340px width ultra-controlled custom desktop alignment container
+    st.markdown('<div>', unsafe_allow_html=True)
+    st.markdown('''
+    <div class="login-box-wrapper">
+        <div class="logo-container">
+            <!-- Professional Custom Thread/Spool Logo Mark -->
+            <svg width="55" height="55" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 18C8.69 18 6 15.31 6 12C6 8.69 8.69 6 12 6C15.31 6 18 8.69 18 12C18 15.31 15.31 18 12 18Z" fill="#1F4E79"/>
+                <path d="M12 8C9.79 8 8 9.79 8 12C8 14.21 9.79 16 12 16C14.21 16 16 14.21 16 12C16 9.79 14.21 8 12 8Z" fill="#27AE60"/>
+                <path d="M12 10.5C11.17 10.5 10.5 11.17 10.5 12C10.5 12.83 11.17 13.5 12 13.5C12.83 13.5 13.5 12.83 13.5 12C13.5 11.17 12.83 10.5 12 10.5Z" fill="#FFFF00"/>
+            </svg>
+        </div>
+        <h3 style="text-align: center; margin: 0px; font-weight: 700; color: #2C3E50;">
+            SMART <span style="color: #1F4E79;">TEXTILE</span>
+        </h3>
+        <p style="text-align: center; color: #7F8C8D; font-size: 11px; margin-top: 4px; margin-bottom: 20px; letter-spacing: 0.5px;">
+            ERP MANUFACTURING PORTAL
+        </p>
+    </div>
+    ''', unsafe_allow_html=True)
     
-    with st.form("login_form", clear_on_submit=False):
-        username = st.text_input("Username / ID", placeholder="Enter your ID")
-        password = st.text_input("Password", type="password", placeholder="••••••••")
-        st.markdown("<br>", unsafe_allow_html=True)
-        submit_login = st.form_submit_button("SECURE LOGIN", use_container_width=True)
-        
-        if submit_login:
-            if username.strip() in st.session_state["users"] and st.session_state["users"][username.strip()]["password"] == password.strip():
-                st.session_state["logged_in"] = True
-                st.session_state["current_user"] = st.session_state["users"][username.strip()]
-                st.rerun()
-            else:
-                st.error("❌ Invalid ID or Password")
+    # Forms and inputs placed cleanly inside an isolated container block
+    col_l1, col_l2, col_l3 = st.columns([1, 0.7, 1])
+    with col_l2:
+        with st.form("login_form", clear_on_submit=False):
+            username = st.text_input("Username / ID", placeholder="Enter ID")
+            password = st.text_input("Password", type="password", placeholder="••••••••")
+            st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+            submit_login = st.form_submit_button("SECURE LOGIN", use_container_width=True)
+            
+            if submit_login:
+                if username.strip() in st.session_state["users"] and st.session_state["users"][username.strip()]["password"] == password.strip():
+                    st.session_state["logged_in"] = True
+                    st.session_state["current_user"] = st.session_state["users"][username.strip()]
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid Login")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 👑 MAIN PORTAL SCREEN (AFTER LOGIN) ---
@@ -166,14 +195,13 @@ else:
         try:
             df = pd.read_excel(EXCEL_FILE, sheet_name="Supervisor Entry")
             if not df.empty:
-                # CHALLAN NO BRINGING NEXT TO DATE
                 if df.shape[1] == 8:
                     df.columns = ["Date", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor"]
                     df["Challan No"] = "-" 
                 elif df.shape[1] == 9:
                     df.columns = ["Date", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor", "Challan No"]
                 
-                # Column Shifting Logic: Date ke just baad Challan No lane ke liye
+                # CHALLAN Baju me locked structure 
                 ordered_cols = ["Date", "Challan No", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor"]
                 df = df[ordered_cols]
                 excel_loaded = True
@@ -243,7 +271,6 @@ else:
     if not os.path.exists(EXCEL_FILE):
         st.error(f"Excel file '{EXCEL_FILE}' nahi mili! Kripya check karein.")
     else:
-        # --- WORKER/SUPERVISOR PORTAL ---
         if user["role"] == "supervisor":
             st.title("📝 Textile Supervisor Data Entry Panel")
             with st.form("entry_form_sup", clear_on_submit=True):
@@ -265,14 +292,11 @@ else:
                     else:
                         wb = openpyxl.load_workbook(EXCEL_FILE)
                         ws = wb["Supervisor Entry"]
-                        # Writing to Excel according to global column index format
-                        # Format inside Excel sheet always matches code structure
                         ws.append([date_input.strftime("%d-%m-%Y"), design_no, party_name, item_type, total_pcs, fresh_pcs, seconds_pcs, user["name"], challan_no])
                         wb.save(EXCEL_FILE)
                         st.success("🎉 Data Entry Saved Successfully with Challan!")
                         st.rerun()
 
-        # --- ADMIN MASTER DASHBOARD ---
         elif user["role"] == "admin":
             st.markdown("<h1 style='color: #1F4E79; font-weight: bold;'>🏭 Textile Factory Master Control Room</h1>", unsafe_allow_html=True)
             
@@ -311,7 +335,7 @@ else:
             items_list = [it.upper().strip() for it in st.session_state["item_options"]]
             current_date = datetime.now().strftime("%d-%m-%y")
 
-            # --- MODERN GRAPH & RE-DESIGNED LIVE DATA SHIELDS ---
+            # --- DUAL CORE LAYOUT ---
             col_left, col_right = st.columns([1, 1.2])
             
             with col_left:
@@ -339,7 +363,6 @@ else:
                     </div>
                     """, unsafe_allow_html=True)
                 
-                # Highlighted Premium Total Pcs Container (Green Shield Accent)
                 st.markdown(f"""
                 <div style="background-color: #27AE60; color: #FFFFFF; padding: 12px 15px; font-weight: bold; font-size: 18px; border: 2px solid #2c3e50; border-radius: 0px 0px 6px 6px; display: flex; justify-content: space-between; box-shadow: 0px 4px 10px rgba(39, 174, 96, 0.25);">
                     <span>📊 TOTAL PRODUCED</span>
@@ -370,15 +393,14 @@ else:
                         'view': {'stroke': None}
                     }, use_container_width=True)
                 else:
-                    st.info("No data recorded yet for today's dynamic layout graphs.")
+                    st.info("No data recorded yet.")
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            # --- LIVE RAW DATAFRAME VIEW (Challan Date Ke Baju Me Shifted) ---
             st.markdown("---")
             st.subheader("📋 Production Master Logs (Date & Challan Locked)")
             st.dataframe(df, hide_index=True, use_container_width=True, height=250)
 
-            # --- CONTROL SETTINGS TABS ---
+            # --- SYSTEM PANEL CONFIG ---
             st.markdown("---")
             st.subheader("⚙️ Factory Configurations Desk")
             t1, t2, t3 = st.tabs(["🏢 Manage Parties", "📦 Manage Items", "👥 Supervisors Accounts"])
