@@ -89,10 +89,9 @@ else:
         # -------------------------------------------------------------
         elif user["role"] == "admin":
             st.title("👑 Admin Master Deskboard")
-            st.markdown("Yahan aapko poore plant ka control aur data ek sath dikhega.")
             
             # --- PART A: ADMIN DATA ENTRY FORM ---
-            with st.expander("📝 Quick Data Entry Form (Click to Open/Close)", expanded=True):
+            with st.expander("📝 Quick Data Entry Form (Click to Open/Close)", expanded=False):
                 with st.form("entry_form_admin", clear_on_submit=True):
                     col1, col2 = st.columns(2)
                     with col1:
@@ -117,22 +116,80 @@ else:
                             st.success("🎉 Data saved directly to Excel sheet!")
                             st.rerun()
 
-            # --- PART B: LIVE EXCEL DATA VIEW ---
+            # --- PART B: IMAGE 5E37A1 STYLE PRODUCTION REPORT ---
             st.markdown("---")
-            st.subheader("📊 Live Plant Production Report (Excel Data)")
+            
             df = pd.read_excel(EXCEL_FILE, sheet_name="Supervisor Entry")
-            if df.empty:
-                st.warning("Excel me abhi tak koi entry nahi hui hai.")
-            else:
-                # Calculations for Summary Cards
-                total_production = df.iloc[:, 4].sum() if df.shape[1] > 4 else 0
-                total_fresh = df.iloc[:, 5].sum() if df.shape[1] > 5 else 0
+            
+            col_dash1, col_dash2 = st.columns([1, 2])
+            
+            with col_dash1:
+                st.subheader("📊 Live Production Summary")
                 
-                c1, c2 = st.columns(2)
-                c1.metric("📦 Total Pieces Produced", f"{total_production} Pcs")
-                c2.metric("✨ Total Fresh Pieces (Grade A)", f"{total_fresh} Pcs")
+                # Excel style summary table code
+                summary_data = []
+                total_all_pcs = 0
                 
-                st.dataframe(df, hide_index=True, use_container_width=True)
+                if not df.empty and df.shape[1] > 6:
+                    # Clean and standardize names
+                    df.columns = ["Date", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor"]
+                    df['Item Type'] = df['Item Type'].astype(str).str.upper().str.strip()
+                    
+                    # Group by Item Type and sum Total Pcs
+                    item_groups = df.groupby('Item Type')['Total Pcs'].sum().to_dict()
+                    
+                    # Build list based on unique items
+                    for item in st.session_state["item_options"]:
+                        item_upper = item.upper().strip()
+                        pcs = item_groups.get(item_upper, 0)
+                        summary_data.append({"PRODUCTION": item_upper, "VALUE / PCS": f"{pcs:,}"})
+                        total_all_pcs += pcs
+                else:
+                    for item in st.session_state["item_options"]:
+                        summary_data.append({"PRODUCTION": item.upper(), "VALUE / PCS": "0"})
+                
+                # Add Total row at bottom
+                summary_data.append({"PRODUCTION": "TOTAL PCS", "VALUE / PCS": f"{total_all_pcs:,}"})
+                summary_df = pd.DataFrame(summary_data)
+                
+                # Render beautiful custom style table (Yellow header, light-blue date like image)
+                current_date_str = datetime.now().strftime("%d-%m-%y")
+                st.markdown(
+                    f"""
+                    <table style="width:100%; border-collapse: collapse; border: 2px solid black; text-align: left; font-family: sans-serif;">
+                        <tr style="background-color: #FFFF00; color: black; font-weight: bold; text-align: center; border-bottom: 2px solid black;">
+                            <td colspan="2" style="padding: 10px; font-size: 18px; letter-spacing: 1px;">PRODUCTION</td>
+                        </tr>
+                        <tr style="background-color: #8EA9DB; color: black; font-weight: bold; border-bottom: 1px solid black;">
+                            <td style="padding: 8px;">DATE</td>
+                            <td style="padding: 8px; text-align: right;">{current_date_str}</td>
+                        </tr>
+                    """, unsafe_allow_html=True
+                )
+                
+                for index, row in summary_df.iterrows():
+                    is_total = row['PRODUCTION'] == "TOTAL PCS"
+                    bg_color = "#FFFFFF"
+                    font_weight = "bold" if is_total else "normal"
+                    border_top = "2px solid black" if is_total else "1px solid #D3D3D3"
+                    font_size = "16px" if is_total else "14px"
+                    
+                    st.markdown(
+                        f"""
+                        <tr style="background-color: {bg_color}; font-weight: {font_weight}; font-size: {font_size}; border-top: {border_top}; border-bottom: 1px solid black;">
+                            <td style="padding: 8px; border-right: 1px solid black;">{row['PRODUCTION']}</td>
+                            <td style="padding: 8px; text-align: right;">{row['VALUE / PCS']}</td>
+                        </tr>
+                        """, unsafe_allow_html=True
+                    )
+                st.markdown("</table><br>", unsafe_allow_html=True)
+                
+            with col_dash2:
+                st.subheader("📋 Raw Excel Entry Logs")
+                if df.empty:
+                    st.warning("Excel me abhi koi data nahi hai.")
+                else:
+                    st.dataframe(df, hide_index=True, use_container_width=True, height=350)
 
             # --- PART C: ADMINISTRATIVE CONTROLS ---
             st.markdown("---")
