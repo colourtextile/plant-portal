@@ -166,11 +166,10 @@ if not st.session_state["logged_in"]:
             background-position: center;
             background-attachment: fixed;
         }}
-        st.markdown("""
-    <style>
         div[data-testid="stForm"] label { color: #FFFFFF !important; }
     </style>
-    """, unsafe_allow_html=True)    
+    """, unsafe_allow_html=True)
+    
     st.markdown('<h1 class="brand-title">COLOUR TEXTILE</h1>', unsafe_allow_html=True)
     st.markdown('<p style="text-align: center; color: #BDC3C7; font-size: 13px; margin-top: -5px; margin-bottom: 40px; font-weight: 500; letter-spacing: 1px;">SAREE WEAVING & PRODUCTION ERP</p>', unsafe_allow_html=True)
     
@@ -200,11 +199,7 @@ else:
         <div style="color: #FFC300; font-size: 20px; font-weight: 800; letter-spacing: 2px; margin-bottom: -5px;">WELCOME</div>
         <div style="color: #FFFFFF; font-size: 22px; font-weight: 900; letter-spacing: 1px;">COLOUR TEXTILE</div>
         <div style="border-top: 1px solid rgba(255,255,255,0.2); margin: 12px 0px;"></div>
-        st.markdown("""
-    <div style="color: #E0E6ED; font-size: 14px; font-weight: 500; text-align: left; padding-left: 5px;">
-        👤 User: <span style="color: #FFFFFF;">Nama</span>
-    </div>
-    """, unsafe_allow_html=True)
+        <div style="color: #E0E6ED; font-size: 14px; font-weight: 500; text-align: left; padding-left: 5px;">👤 User: <span style="color: #30c381; font-weight: 700;">{user['name']}</span></div>
         <div style="color: #B4C6E7; font-size: 12px; margin-top: 2px; text-align: left; padding-left: 5px;">📋 Access Level: <b>{user['role'].upper()}</b></div>
     </div>
     """, unsafe_allow_html=True)
