@@ -609,5 +609,3 @@ else:
                                 del st.session_state["users"][sup_to_remove]
                                 st.warning("Account deleted from database!")
                                 st.rerun()
-
-```
