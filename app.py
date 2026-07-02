@@ -223,10 +223,10 @@ else:
     </div>
     """, unsafe_allow_html=True)
     
-    # Navigation items including Email Setup
+    # Navigation items including Email Setup and Factory Config
     nav_options = ["📊 Dashboard"]
     if user["role"] == "admin":
-        nav_options.extend(["📝 Data Entry", "🎯 Target Settings", "📧 Setup Email Auto-Backup"])
+        nav_options.extend(["📝 Data Entry", "🎯 Target Settings", "📧 Setup Email Auto-Backup", "⚙️ Factory Config"])
         
     nav_choice = st.sidebar.radio("🧭 Navigation Menu", nav_options)
         
@@ -261,7 +261,7 @@ else:
         st.rerun()
 
     if not os.path.exists(EXCEL_FILE):
-        st.error(f"Excel file '{EXCEL_FILE}' nahi mili!")
+        st.error(f"Excel file '{EXCEL_FILE}' nahi mili! System ke folders check karein.")
     else:
         # --- 📧 EMAIL AUTO-BACKUP CONFIG PANEL ---
         if user["role"] == "admin" and nav_choice == "📧 Setup Email Auto-Backup":
@@ -321,12 +321,136 @@ else:
                         wb.save(EXCEL_FILE)
                         st.success("🎉 Entry Saved Successfully!")
 
+        # --- CONFIGURATIONS DESK FOR ADMIN (MOVED TO SIDEBAR) ---
+        elif user["role"] == "admin" and nav_choice == "⚙️ Factory Config":
+            st.subheader("⚙️ Factory Configurations Desk")
+            t1, t2, t3 = st.tabs(["🏢 Manage Parties", "📦 Manage Items", "👥 Supervisors Accounts"])
+            
+            with t1:
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.markdown("**➕ Add New Party**")
+                    new_party = st.text_input("Enter Party Name to Add", placeholder="e.g. Balaji Corp").strip()
+                    if st.button("Save New Party"):
+                        if new_party and new_party not in st.session_state["party_options"]:
+                            st.session_state["party_options"].append(new_party)
+                            st.success(f"Added: {new_party}")
+                            st.rerun()
+                with col2:
+                    st.markdown("**✏️ Edit Party Name**")
+                    party_to_edit = st.selectbox("Select Target Party to Edit", st.session_state["party_options"], key="edt_p")
+                    edited_party_name = st.text_input("Enter New Modified Name", value=party_to_edit)
+                    if st.button("Update Party Name"):
+                        if edited_party_name and party_to_edit:
+                            idx = st.session_state["party_options"].index(party_to_edit)
+                            st.session_state["party_options"][idx] = edited_party_name
+                            st.success("Updated!")
+                            st.rerun()
+                with col3:
+                    st.markdown("**❌ Remove Party**")
+                    party_to_remove = st.selectbox("Select Party to Delete", st.session_state["party_options"], key="rem_p")
+                    if st.button("Delete Party From System", type="primary"):
+                        if party_to_remove in st.session_state["party_options"]:
+                            st.session_state["party_options"].remove(party_to_remove)
+                            st.rerun()
+
+            with t2:
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.markdown("**➕ Add New Item Type**")
+                    new_item = st.text_input("Enter Item Name to Add", placeholder="e.g. SILK SAREE").strip()
+                    if st.button("Save New Item"):
+                        if new_item and new_item.upper() not in st.session_state["item_options"]:
+                            st.session_state["item_options"].append(new_item.upper())
+                            st.success("Added!")
+                            st.rerun()
+                with col2:
+                    st.markdown("**✏️ Edit Item Name**")
+                    item_to_edit = st.selectbox("Select Item to Edit from List", st.session_state["item_options"], key="edt_i")
+                    edited_item_name = st.text_input("Enter New Name for Selected Item", value=item_to_edit)
+                    if st.button("Update Item Name"):
+                        if edited_item_name and item_to_edit:
+                            idx = st.session_state["item_options"].index(item_to_edit)
+                            st.session_state["item_options"][idx] = edited_item_name.upper()
+                            st.success("Updated!")
+                            st.rerun()
+                with col3:
+                    st.markdown("**❌ Remove Item Type**")
+                    item_to_remove = st.selectbox("Select Item to Delete from System", st.session_state["item_options"], key="rem_i")
+                    if st.button("Delete Item Category", type="primary"):
+                        if item_to_remove in st.session_state["item_options"]:
+                            st.session_state["item_options"].remove(item_to_remove)
+                            st.rerun()
+
+            with t3:
+                col_u1, col_u2, col_u3 = st.columns(3)
+                with col_u1:
+                    st.markdown("**➕ Add New Supervisor Account**")
+                    with st.form("add_user_form", clear_on_submit=True):
+                        add_id = st.text_input("Set Login ID / Username", placeholder="e.g. ramesh01").strip()
+                        add_pass = st.text_input("Set Account Password", type="password", placeholder="••••••••").strip()
+                        add_name = st.text_input("Supervisor Full Real Name", placeholder="e.g. Ramesh Kumar").strip()
+                        
+                        st.markdown("⚠️ **Set Dynamic Custom Permissions:**")
+                        cb_entry = st.checkbox("Allow Data Entry Form Access", value=True)
+                        cb_view = st.checkbox("Allow View Production Logs", value=True)
+                        cb_edit = st.checkbox("Allow Edit/Delete Logged Records (Admin Rights)", value=False)
+                        
+                        if st.form_submit_button("Create Account"):
+                            if add_id and add_pass and add_name:
+                                if add_id not in st.session_state["users"]:
+                                    st.session_state["users"][add_id] = {
+                                        "password": add_pass, 
+                                        "name": add_name, 
+                                        "role": "supervisor",
+                                        "p_entry": cb_entry,
+                                        "p_view": cb_view,
+                                        "p_edit": cb_edit
+                                    }
+                                    st.success(f"Supervisor '{add_name}' Created!")
+                                    st.rerun()
+                            
+                with col_u2:
+                    st.markdown("**✏️ Edit Info & Checkbox Permissions**")
+                    all_users = list(st.session_state["users"].keys())
+                    sups_only = [u for u in all_users if st.session_state["users"][u]["role"] == "supervisor"]
+                    
+                    if sups_only:
+                        selected_sup = st.selectbox("Select Supervisor ID to Modify", sups_only, key="sel_sup_edt")
+                        current_sup_data = st.session_state["users"][selected_sup]
+                        
+                        edit_name = st.text_input("Edit Full Name Display", value=current_sup_data["name"])
+                        edit_pass = st.text_input("Edit Security Password", value=current_sup_data["password"])
+                        
+                        st.markdown("⚙️ **Update Checkbox Permissions:**")
+                        edit_cb_entry = st.checkbox("Allow Data Entry Form Access", value=current_sup_data.get("p_entry", True), key="ed_e")
+                        edit_cb_view = st.checkbox("Allow View Production Logs", value=current_sup_data.get("p_view", True), key="ed_v")
+                        edit_cb_edit = st.checkbox("Allow Edit/Delete Logged Records (Admin Rights)", value=current_sup_data.get("p_edit", False), key="ed_d")
+                        
+                        if st.button("Update Supervisor Account"):
+                            if edit_name and edit_pass:
+                                st.session_state["users"][selected_sup]["name"] = edit_name
+                                st.session_state["users"][selected_sup]["password"] = edit_pass
+                                st.session_state["users"][selected_sup]["p_entry"] = edit_cb_entry
+                                st.session_state["users"][selected_sup]["p_view"] = edit_cb_view
+                                st.session_state["users"][selected_sup]["p_edit"] = edit_cb_edit
+                                st.success("Account & Checkbox Permissions updated!")
+                                st.rerun()
+                        
+                with col_u3:
+                    st.markdown("**❌ Remove Supervisor**")
+                    if sups_only:
+                        sup_to_remove = st.selectbox("Select Supervisor ID to Delete", sups_only, key="sel_sup_rem")
+                        if st.button("Delete Supervisor Account", type="primary"):
+                            del st.session_state["users"][sup_to_remove]
+                            st.warning("Account deleted from database!")
+                            st.rerun()
+
         # --- DASHBOARD LOGIC ---
-        else:
+        elif nav_choice == "📊 Dashboard":
             st.markdown("<h2 style='color: #1F4E79; font-weight: bold; margin-top: -10px;'>📊 Live Analytics Dashboard</h2>", unsafe_allow_html=True)
             
-            # --- 📅 1. CHOOSE FILTER RANGE (DAY-WISE OR MONTH-WISE) ---
-            st.markdown("### 🎛️ Filter Range Selection")
+            # --- 📅 1. CHOOSE FILTER RANGE (DAY-WISE OR MONTH-WISE) - Removed "Filter Range Selection" Header ---
             filter_type = st.radio("📅 Select Dashboard Filter Range:", ["☀️ Day-Wise Filter", "📆 Month-Wise Filter"], horizontal=True)
             
             filtered_df_by_range = pd.DataFrame()
@@ -336,7 +460,6 @@ else:
             if excel_loaded and not df.empty:
                 df['Item Type'] = df['Item Type'].astype(str).str.upper().str.strip()
                 df['Date'] = df['Date'].astype(str).str.strip()
-                # Create a parsed date column in memory for month-wise mapping
                 df['parsed_date'] = pd.to_datetime(df['Date'], format='%d-%m-%Y', errors='coerce')
                 df['Month_Year'] = df['parsed_date'].dt.strftime('%B %Y')
             
@@ -356,7 +479,6 @@ else:
                 if excel_loaded and not df.empty:
                     available_months = sorted(list(df['Month_Year'].dropna().unique()))
                 
-                # Fallback to make sure current month is always present in dropdown
                 if current_month_year not in available_months:
                     available_months.append(current_month_year)
                     
@@ -370,15 +492,19 @@ else:
             # Aggregating values for summaries and charts
             if not filtered_df_by_range.empty:
                 item_groups = filtered_df_by_range.groupby('Item Type')['Total Pcs'].sum().to_dict()
+                party_groups = filtered_df_by_range.groupby('Party Name')['Total Pcs'].sum().to_dict()
             else:
                 item_groups = {}
+                party_groups = {}
 
             items_list = [it.upper().strip() for it in st.session_state["item_options"]]
+            party_list = st.session_state["party_options"]
 
             # Rendering Summary Box and Round Donut Chart side-by-side
             col_left, col_right = st.columns([1, 1.2])
             
             with col_left:
+                # --- ITEM PIECES SUMMARY ---
                 st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
                 st.markdown(f"""
                 <div style="background-color: #FFFF00; color: #000000; text-align: center; font-weight: bold; padding: 12px; font-size: 20px; border: 2px solid #2c3e50; border-bottom: none; border-radius: 6px 6px 0px 0px;">
@@ -402,6 +528,35 @@ else:
                 st.markdown(f"""
                 <div style="background-color: #27AE60; color: #FFFFFF; padding: 12px 15px; font-weight: bold; font-size: 18px; border: 2px solid #2c3e50; border-radius: 0px 0px 6px 6px; display: flex; justify-content: space-between;">
                     <span>📊 TOTAL PRODUCED</span><u>{total_sum:,} Pcs</u>
+                </div>
+                """, unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+                # --- PARTY PIECES SUMMARY (NEWLY ADDED) ---
+                st.markdown('<div class="dashboard-card" style="margin-top: 20px;">', unsafe_allow_html=True)
+                st.markdown(f"""
+                <div style="background-color: #FFA500; color: #000000; text-align: center; font-weight: bold; padding: 12px; font-size: 20px; border: 2px solid #2c3e50; border-bottom: none; border-radius: 6px 6px 0px 0px;">
+                    🏢 PARTY PIECES SUMMARY
+                </div>
+                <div style="background-color: #1F4E79; color: #FFFFFF; padding: 10px 15px; font-weight: bold; font-size: 15px; border-left: 2px solid #2c3e50; border-right: 2px solid #2c3e50; border-bottom: 2px solid #2c3e50; text-align: center;">
+                    {display_range_label}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                party_total_sum = 0
+                for pt in party_list:
+                    val = party_groups.get(pt, 0)
+                    if val > 0: # Sirf un parties ko dikhayega jinka kaam hua hai
+                        party_total_sum += val
+                        st.markdown(f"""
+                        <div style="background-color: #FFFFFF; color: #333333; padding: 10px 15px; font-size: 14px; border-left: 2px solid #2c3e50; border-right: 2px solid #2c3e50; border-bottom: 1px solid #EAEAEA; display: flex; justify-content: space-between;">
+                            <span>{pt}</span><b>{val:,} Pcs</b>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                st.markdown(f"""
+                <div style="background-color: #27AE60; color: #FFFFFF; padding: 12px 15px; font-weight: bold; font-size: 18px; border: 2px solid #2c3e50; border-radius: 0px 0px 6px 6px; display: flex; justify-content: space-between;">
+                    <span>📊 TOTAL PRODUCED</span><u>{party_total_sum:,} Pcs</u>
                 </div>
                 """, unsafe_allow_html=True)
                 st.markdown('</div>', unsafe_allow_html=True)
@@ -502,129 +657,3 @@ else:
             else:
                 st.subheader("📋 Production Master Logs (Full Control)")
                 st.dataframe(df, hide_index=True, use_container_width=True, height=250)
-
-            # --- CONFIGURATIONS DESK FOR ADMIN ---
-            if user["role"] == "admin":
-                st.markdown("---")
-                st.subheader("⚙️ Factory Configurations Desk")
-                t1, t2, t3 = st.tabs(["🏢 Manage Parties", "📦 Manage Items", "👥 Supervisors Accounts"])
-                
-                with t1:
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.markdown("**➕ Add New Party**")
-                        new_party = st.text_input("Enter Party Name to Add", placeholder="e.g. Balaji Corp").strip()
-                        if st.button("Save New Party"):
-                            if new_party and new_party not in st.session_state["party_options"]:
-                                st.session_state["party_options"].append(new_party)
-                                st.success(f"Added: {new_party}")
-                                st.rerun()
-                    with col2:
-                        st.markdown("**✏️ Edit Party Name**")
-                        party_to_edit = st.selectbox("Select Target Party to Edit", st.session_state["party_options"], key="edt_p")
-                        edited_party_name = st.text_input("Enter New Modified Name", value=party_to_edit)
-                        if st.button("Update Party Name"):
-                            if edited_party_name and party_to_edit:
-                                idx = st.session_state["party_options"].index(party_to_edit)
-                                st.session_state["party_options"][idx] = edited_party_name
-                                st.success("Updated!")
-                                st.rerun()
-                    with col3:
-                        st.markdown("**❌ Remove Party**")
-                        party_to_remove = st.selectbox("Select Party to Delete", st.session_state["party_options"], key="rem_p")
-                        if st.button("Delete Party From System", type="primary"):
-                            if party_to_remove in st.session_state["party_options"]:
-                                st.session_state["party_options"].remove(party_to_remove)
-                                st.rerun()
-
-                with t2:
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.markdown("**➕ Add New Item Type**")
-                        new_item = st.text_input("Enter Item Name to Add", placeholder="e.g. SILK SAREE").strip()
-                        if st.button("Save New Item"):
-                            if new_item and new_item.upper() not in st.session_state["item_options"]:
-                                st.session_state["item_options"].append(new_item.upper())
-                                st.success("Added!")
-                                st.rerun()
-                    with col2:
-                        st.markdown("**✏️ Edit Item Name**")
-                        item_to_edit = st.selectbox("Select Item to Edit from List", st.session_state["item_options"], key="edt_i")
-                        edited_item_name = st.text_input("Enter New Name for Selected Item", value=item_to_edit)
-                        if st.button("Update Item Name"):
-                            if edited_item_name and item_to_edit:
-                                idx = st.session_state["item_options"].index(item_to_edit)
-                                st.session_state["item_options"][idx] = edited_item_name.upper()
-                                st.success("Updated!")
-                                st.rerun()
-                    with col3:
-                        st.markdown("**❌ Remove Item Type**")
-                        item_to_remove = st.selectbox("Select Item to Delete from System", st.session_state["item_options"], key="rem_i")
-                        if st.button("Delete Item Category", type="primary"):
-                            if item_to_remove in st.session_state["item_options"]:
-                                st.session_state["item_options"].remove(item_to_remove)
-                                st.rerun()
-
-                with t3:
-                    col_u1, col_u2, col_u3 = st.columns(3)
-                    with col_u1:
-                        st.markdown("**➕ Add New Supervisor Account**")
-                        with st.form("add_user_form", clear_on_submit=True):
-                            add_id = st.text_input("Set Login ID / Username", placeholder="e.g. ramesh01").strip()
-                            add_pass = st.text_input("Set Account Password", type="password", placeholder="••••••••").strip()
-                            add_name = st.text_input("Supervisor Full Real Name", placeholder="e.g. Ramesh Kumar").strip()
-                            
-                            st.markdown("⚠️ **Set Dynamic Custom Permissions:**")
-                            cb_entry = st.checkbox("Allow Data Entry Form Access", value=True)
-                            cb_view = st.checkbox("Allow View Production Logs", value=True)
-                            cb_edit = st.checkbox("Allow Edit/Delete Logged Records (Admin Rights)", value=False)
-                            
-                            if st.form_submit_button("Create Account"):
-                                if add_id and add_pass and add_name:
-                                    if add_id not in st.session_state["users"]:
-                                        st.session_state["users"][add_id] = {
-                                            "password": add_pass, 
-                                            "name": add_name, 
-                                            "role": "supervisor",
-                                            "p_entry": cb_entry,
-                                            "p_view": cb_view,
-                                            "p_edit": cb_edit
-                                        }
-                                        st.success(f"Supervisor '{add_name}' Created!")
-                                        st.rerun()
-                                
-                    with col_u2:
-                        st.markdown("**✏️ Edit Info & Checkbox Permissions**")
-                        all_users = list(st.session_state["users"].keys())
-                        sups_only = [u for u in all_users if st.session_state["users"][u]["role"] == "supervisor"]
-                        
-                        if sups_only:
-                            selected_sup = st.selectbox("Select Supervisor ID to Modify", sups_only, key="sel_sup_edt")
-                            current_sup_data = st.session_state["users"][selected_sup]
-                            
-                            edit_name = st.text_input("Edit Full Name Display", value=current_sup_data["name"])
-                            edit_pass = st.text_input("Edit Security Password", value=current_sup_data["password"])
-                            
-                            st.markdown("⚙️ **Update Checkbox Permissions:**")
-                            edit_cb_entry = st.checkbox("Allow Data Entry Form Access", value=current_sup_data.get("p_entry", True), key="ed_e")
-                            edit_cb_view = st.checkbox("Allow View Production Logs", value=current_sup_data.get("p_view", True), key="ed_v")
-                            edit_cb_edit = st.checkbox("Allow Edit/Delete Logged Records (Admin Rights)", value=current_sup_data.get("p_edit", False), key="ed_d")
-                            
-                            if st.button("Update Supervisor Account"):
-                                if edit_name and edit_pass:
-                                    st.session_state["users"][selected_sup]["name"] = edit_name
-                                    st.session_state["users"][selected_sup]["password"] = edit_pass
-                                    st.session_state["users"][selected_sup]["p_entry"] = edit_cb_entry
-                                    st.session_state["users"][selected_sup]["p_view"] = edit_cb_view
-                                    st.session_state["users"][selected_sup]["p_edit"] = edit_cb_edit
-                                    st.success("Account & Checkbox Permissions updated!")
-                                    st.rerun()
-                            
-                    with col_u3:
-                        st.markdown("**❌ Remove Supervisor**")
-                        if sups_only:
-                            sup_to_remove = st.selectbox("Select Supervisor ID to Delete", sups_only, key="sel_sup_rem")
-                            if st.button("Delete Supervisor Account", type="primary"):
-                                del st.session_state["users"][sup_to_remove]
-                                st.warning("Account deleted from database!")
-                                st.rerun()
