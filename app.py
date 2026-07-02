@@ -10,15 +10,55 @@ from email.mime.base import MIMEBase
 from email import encoders
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
+import random
 
 EXCEL_FILE = "Final_Plant_System_With_All_Dropdowns.xlsx"
 
 # --- 📧 EMAIL CONFIGURATION (Apna Details Yahan Bharein) ---
-EMAIL_SENDER = "aapka_gmail@gmail.com"        # Bhejne wale ka email
-EMAIL_PASSWORD = "xxxx xxxx xxxx xxxx"       # Gmail ka 16-digit App Password 
-EMAIL_RECEIVER = "aapka_mail@gmail.com"      # Jiss par backup mangwana hai
+EMAIL_SENDER = "aapka_gmail@gmail.com"
+EMAIL_PASSWORD = "xxxx xxxx xxxx xxxx"       
+EMAIL_RECEIVER = "aapka_mail@gmail.com"      
 
-st.set_page_config(page_title="Plant Production Portal", layout="wide")
+st.set_page_config(page_title="Textile Production Portal", layout="wide")
+
+# --- 🎨 CUSTOM CSS FOR COMPACT PROFESSIONAL UI & TEXTILE SLIDES ---
+# Har login par random textile manufacturing images load hongi background me
+textile_bg_images = [
+    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1920&auto=format&fit=crop", # Abstract fabric weaves
+    "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=1920&auto=format&fit=crop", # Yarns and threads
+    "https://images.unsplash.com/photo-1524295981-9a7ba6d322b2?q=80&w=1920&auto=format&fit=crop"  # Textile weaving machinery loom
+]
+selected_bg = random.choice(textile_bg_images)
+
+st.markdown(f"""
+<style>
+    /* Global Dashboard Clean look */
+    .reportview-container {{
+        background: #f8f9fa;
+    }}
+    
+    /* Login Box Styling - Center & Compact */
+    .login-container {{
+        background-color: rgba(255, 255, 255, 0.95);
+        padding: 2.5rem;
+        border-radius: 12px;
+        box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.3);
+        max-width: 400px;
+        margin: 6% auto;
+        border-top: 5px solid #1F4E79;
+    }}
+    
+    /* Premium Dashboard Layout Boxes */
+    .dashboard-card {{
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+        border: 1px solid #eef2f5;
+    }}
+</style>
+""", unsafe_allow_html=True)
 
 # --- 🛡️ AUTOMATIC EMAIL BACKUP FUNCTION ---
 def send_excel_backup_email():
@@ -46,7 +86,7 @@ def send_excel_backup_email():
         server.login(EMAIL_SENDER, EMAIL_PASSWORD)
         server.send_message(msg)
         server.quit()
-    except Exception as e:
+    except:
         pass
 
 # --- 🕒 SCHEDULER: DIN ME 5 BAAR AUTOMATIC RUN ---
@@ -78,19 +118,41 @@ if "logged_in" not in st.session_state:
 if "current_user" not in st.session_state:
     st.session_state["current_user"] = None
 
-# MAIN APPLICATION (AFTER LOGIN)
+# --- 🔒 MAIN APPLICATION (LOGIN SCREEN CONVERTED TO TEXTILE THEME) ---
 if not st.session_state["logged_in"]:
-    st.markdown("<h2 style='text-align: center; color: #1F4E79;'>🔐 Plant Portal - Secure Login</h2>", unsafe_allow_html=True)
-    with st.form("login_form"):
-        username = st.text_input("Username / ID").strip()
-        password = st.text_input("Password", type="password").strip()
-        if st.form_submit_button("LOGIN"):
-            if username in st.session_state["users"] and st.session_state["users"][username]["password"] == password:
+    # Full page textile background injection
+    st.markdown(f"""
+    <style>
+        .stApp {{
+            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("{selected_bg}");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }}
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Chota aur Compact Centered Login Form Layout
+    st.markdown('<div class="login-container">', unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #1F4E79; margin-bottom: 5px; font-family: sans-serif;'>🧵 TEXTILE ERP</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #666; font-size:13px; margin-bottom: 25px;'>Manufacturing Management System</p>", unsafe_allow_html=True)
+    
+    with st.form("login_form", clear_on_submit=False):
+        username = st.text_input("Username / ID", placeholder="Enter your ID")
+        password = st.text_input("Password", type="password", placeholder="••••••••")
+        st.markdown("<br>", unsafe_allow_html=True)
+        submit_login = st.form_submit_button("SECURE LOGIN", use_container_width=True)
+        
+        if submit_login:
+            if username.strip() in st.session_state["users"] and st.session_state["users"][username.strip()]["password"] == password.strip():
                 st.session_state["logged_in"] = True
-                st.session_state["current_user"] = st.session_state["users"][username]
+                st.session_state["current_user"] = st.session_state["users"][username.strip()]
                 st.rerun()
             else:
-                st.error("❌ Galat ID ya Password!")
+                st.error("❌ Invalid ID or Password")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# --- 👑 MAIN PORTAL SCREEN (AFTER LOGIN) ---
 else:
     user = st.session_state["current_user"]
     
@@ -104,36 +166,36 @@ else:
         try:
             df = pd.read_excel(EXCEL_FILE, sheet_name="Supervisor Entry")
             if not df.empty:
+                # CHALLAN NO BRINGING NEXT TO DATE
                 if df.shape[1] == 8:
                     df.columns = ["Date", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor"]
                     df["Challan No"] = "-" 
                 elif df.shape[1] == 9:
                     df.columns = ["Date", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor", "Challan No"]
+                
+                # Column Shifting Logic: Date ke just baad Challan No lane ke liye
+                ordered_cols = ["Date", "Challan No", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor"]
+                df = df[ordered_cols]
                 excel_loaded = True
         except:
             pass
 
-    # --- 📊 ADVANCED REPORTS CENTER IN SIDEBAR (All Options Included) ---
+    # --- 📊 ADVANCED REPORTS CENTER IN SIDEBAR ---
     if user["role"] == "admin" and excel_loaded and not df.empty:
         st.sidebar.markdown("---")
         with st.sidebar.expander("📊 Advanced Reports Center", expanded=False):
-            st.markdown("<small>Sabhi options se data filter karein:</small>", unsafe_allow_html=True)
-            
-            # Options list extraction from existing data
             all_parties = ["All Parties"] + sorted(list(df["Party Name"].dropna().unique()))
             all_designs = ["All Designs"] + sorted(list(df["Design No"].dropna().astype(str).unique()))
             all_items = ["All Items"] + sorted(list(df["Item Type"].dropna().unique()))
             all_supervisors = ["All Supervisors"] + sorted(list(df["Supervisor"].dropna().unique()))
             all_challans = ["All Challans"] + sorted(list(df["Challan No"].dropna().astype(str).unique()))
             
-            # Form elements inside sidebar
             filter_party = st.selectbox("1. Filter by Party", all_parties)
             filter_design = st.selectbox("2. Filter by Design No", all_designs)
             filter_item = st.selectbox("3. Filter by Item Type", all_items)
             filter_supervisor = st.selectbox("4. Filter by Supervisor", all_supervisors)
             filter_challan = st.selectbox("5. Filter by Challan No", all_challans)
             
-            # Filtering Logic
             filtered_df = df.copy()
             if filter_party != "All Parties":
                 filtered_df = filtered_df[filtered_df["Party Name"] == filter_party]
@@ -146,7 +208,6 @@ else:
             if filter_challan != "All Challans":
                 filtered_df = filtered_df[filtered_df["Challan No"].astype(str) == filter_challan]
                 
-            # Quick Stats inside sidebar
             tot_filtered_pcs = filtered_df["Total Pcs"].sum() if not filtered_df.empty else 0
             st.markdown(f"""
             <div style="background-color: #f1f3f4; padding: 8px; border-radius: 4px; margin-bottom: 10px;">
@@ -155,7 +216,6 @@ else:
             </div>
             """, unsafe_allow_html=True)
             
-            # Export to Excel buffer
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 filtered_df.to_excel(writer, sheet_name='Filtered Report', index=False)
@@ -179,12 +239,13 @@ else:
         st.session_state["current_user"] = None
         st.rerun()
 
-    # --- MAIN PORTAL SCREEN ---
+    # --- MAIN SCREEN LOGICS ---
     if not os.path.exists(EXCEL_FILE):
         st.error(f"Excel file '{EXCEL_FILE}' nahi mili! Kripya check karein.")
     else:
+        # --- WORKER/SUPERVISOR PORTAL ---
         if user["role"] == "supervisor":
-            st.title("📝 Supervisor Data Entry Portal")
+            st.title("📝 Textile Supervisor Data Entry Panel")
             with st.form("entry_form_sup", clear_on_submit=True):
                 col1, col2 = st.columns(2)
                 with col1:
@@ -198,21 +259,24 @@ else:
                     fresh_pcs = st.number_input("Fresh Pieces (Grade A)", min_value=0, step=1)
                     seconds_pcs = st.number_input("Seconds Pieces (Grade B)", min_value=0, step=1)
                 
-                if st.form_submit_button("SAVE ENTRY"):
+                if st.form_submit_button("SAVE PRODUCTION ENTRY"):
                     if fresh_pcs + seconds_pcs != total_pcs:
                         st.error("❌ Galti: Total Pcs ka jod sahi nahi hai!")
                     else:
                         wb = openpyxl.load_workbook(EXCEL_FILE)
                         ws = wb["Supervisor Entry"]
+                        # Writing to Excel according to global column index format
+                        # Format inside Excel sheet always matches code structure
                         ws.append([date_input.strftime("%d-%m-%Y"), design_no, party_name, item_type, total_pcs, fresh_pcs, seconds_pcs, user["name"], challan_no])
                         wb.save(EXCEL_FILE)
-                        st.success("🎉 Entry Saved Successfully with Challan!")
+                        st.success("🎉 Data Entry Saved Successfully with Challan!")
                         st.rerun()
 
+        # --- ADMIN MASTER DASHBOARD ---
         elif user["role"] == "admin":
-            st.title("👑 Admin Master Deskboard")
+            st.markdown("<h1 style='color: #1F4E79; font-weight: bold;'>🏭 Textile Factory Master Control Room</h1>", unsafe_allow_html=True)
             
-            with st.expander("📝 Quick Data Entry Form", expanded=False):
+            with st.expander("📝 Quick Data Entry Form (Admin View)", expanded=False):
                 with st.form("entry_form_admin", clear_on_submit=True):
                     col1, col2 = st.columns(2)
                     with col1:
@@ -227,13 +291,13 @@ else:
                         seconds_pcs = st.number_input("Seconds Pieces (Grade B)", min_value=0, step=1, key="adm_sec")
                     if st.form_submit_button("SAVE ADMIN ENTRY"):
                         if fresh_pcs + seconds_pcs != total_pcs:
-                            st.error("❌ Total Pcs galat hain!")
+                            st.error("❌ Total Pcs calculation mismatch!")
                         else:
                             wb = openpyxl.load_workbook(EXCEL_FILE)
                             ws = wb["Supervisor Entry"]
                             ws.append([date_input.strftime("%d-%m-%Y"), design_no, party_name, item_type, total_pcs, fresh_pcs, seconds_pcs, user["name"], challan_no])
                             wb.save(EXCEL_FILE)
-                            st.success("🎉 Entry Saved Successfully!")
+                            st.success("🎉 Entry Saved!")
                             st.rerun()
 
             st.markdown("---")
@@ -247,18 +311,19 @@ else:
             items_list = [it.upper().strip() for it in st.session_state["item_options"]]
             current_date = datetime.now().strftime("%d-%m-%y")
 
-            # --- SCREEN COLUMNS FOR GRAPH AND NEW FIXED COLOR CODES ---
+            # --- MODERN GRAPH & RE-DESIGNED LIVE DATA SHIELDS ---
             col_left, col_right = st.columns([1, 1.2])
             
             with col_left:
-                st.subheader("📊 Live Summary Table")
+                st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
+                st.subheader("📊 Live Production Summary")
                 
                 st.markdown(f"""
-                <div style="background-color: #FFFF00; color: #000000; text-align: center; font-weight: bold; padding: 10px; font-size: 18px; border: 2px solid #000000; border-bottom: none; border-radius: 4px 4px 0px 0px;">
-                    PRODUCTION
+                <div style="background-color: #FFFF00; color: #000000; text-align: center; font-weight: bold; padding: 12px; font-size: 20px; border: 2px solid #2c3e50; border-bottom: none; border-radius: 6px 6px 0px 0px; font-family: sans-serif;">
+                    🏭 PRODUCTION REPORT
                 </div>
-                <div style="background-color: #4F81BD; color: #FFFFFF; padding: 10px; font-weight: bold; font-size: 15px; border-left: 2px solid #000000; border-right: 2px solid #000000; border-bottom: 2px solid #000000; display: flex; justify-content: space-between;">
-                    <span>DATE</span>
+                <div style="background-color: #1F4E79; color: #FFFFFF; padding: 10px 15px; font-weight: bold; font-size: 15px; border-left: 2px solid #2c3e50; border-right: 2px solid #2c3e50; border-bottom: 2px solid #2c3e50; display: flex; justify-content: space-between;">
+                    <span>📅 SYSTEM DATE</span>
                     <span>{current_date}</span>
                 </div>
                 """, unsafe_allow_html=True)
@@ -268,21 +333,24 @@ else:
                     val = item_groups.get(it, 0)
                     total_sum += val
                     st.markdown(f"""
-                    <div style="background-color: #FFFFFF; color: #000000; padding: 8px 12px; font-size: 14px; border-left: 2px solid #000000; border-right: 2px solid #000000; border-bottom: 1px solid #E0E0E0; display: flex; justify-content: space-between;">
-                        <span>{it}</span>
-                        <span style="font-weight: bold;">{val:,}</span>
+                    <div style="background-color: #FFFFFF; color: #333333; padding: 10px 15px; font-size: 14px; border-left: 2px solid #2c3e50; border-right: 2px solid #2c3e50; border-bottom: 1px solid #EAEAEA; display: flex; justify-content: space-between;">
+                        <span style="font-weight: 500;">{it}</span>
+                        <span style="font-weight: bold; color: #2c3e50;">{val:,} Pcs</span>
                     </div>
                     """, unsafe_allow_html=True)
                 
+                # Highlighted Premium Total Pcs Container (Green Shield Accent)
                 st.markdown(f"""
-                <div style="background-color: #2ECC71; color: #FFFFFF; padding: 10px 12px; font-weight: bold; font-size: 16px; border: 2px solid #000000; border-radius: 0px 0px 4px 4px; display: flex; justify-content: space-between;">
-                    <span>TOTAL PCS</span>
-                    <span style="text-decoration: underline; font-size: 17px;">{total_sum:,}</span>
+                <div style="background-color: #27AE60; color: #FFFFFF; padding: 12px 15px; font-weight: bold; font-size: 18px; border: 2px solid #2c3e50; border-radius: 0px 0px 6px 6px; display: flex; justify-content: space-between; box-shadow: 0px 4px 10px rgba(39, 174, 96, 0.25);">
+                    <span>📊 TOTAL PRODUCED</span>
+                    <span style="text-decoration: underline; font-size: 19px; letter-spacing: 0.5px;">{total_sum:,} Pcs</span>
                 </div>
                 """, unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
                 
             with col_right:
-                st.subheader("🍩 Item Wise Percentage Graph")
+                st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
+                st.subheader("🍩 Share Share Matrix Chart")
                 chart_labels = []
                 chart_values = []
                 for it in items_list:
@@ -294,26 +362,27 @@ else:
                 if chart_values:
                     chart_df = pd.DataFrame({"Items": chart_labels, "Pieces": chart_values})
                     st.vega_lite_chart(chart_df, {
-                        'mark': {'type': 'arc', 'innerRadius': 50, 'tooltip': True},
+                        'mark': {'type': 'arc', 'innerRadius': 55, 'tooltip': True},
                         'encoding': {
                             'theta': {'field': 'Pieces', 'type': 'quantitative'},
-                            'color': {'field': 'Items', 'type': 'nominal', 'scale': {'scheme': 'category20'}},
+                            'color': {'field': 'Items', 'type': 'nominal', 'scale': {'scheme': 'tablet10'}},
                         },
                         'view': {'stroke': None}
                     }, use_container_width=True)
                 else:
-                    st.info("Graph dekhne ke liye data entry kijiye!")
+                    st.info("No data recorded yet for today's dynamic layout graphs.")
+                st.markdown('</div>', unsafe_allow_html=True)
 
-            # --- PART D: RAW DATA & ADVANCED CONTROLS ---
+            # --- LIVE RAW DATAFRAME VIEW (Challan Date Ke Baju Me Shifted) ---
             st.markdown("---")
-            st.subheader("📋 Raw Excel Logs")
-            st.dataframe(df, hide_index=True, use_container_width=True, height=220)
+            st.subheader("📋 Production Master Logs (Date & Challan Locked)")
+            st.dataframe(df, hide_index=True, use_container_width=True, height=250)
 
+            # --- CONTROL SETTINGS TABS ---
             st.markdown("---")
-            st.subheader("⚙️ System Control Center (Edit / Remove Panel)")
+            st.subheader("⚙️ Factory Configurations Desk")
             t1, t2, t3 = st.tabs(["🏢 Manage Parties", "📦 Manage Items", "👥 Supervisors Accounts"])
             
-            # TAB 1: PARTY MANAGEMENT
             with t1:
                 col1, col2, col3 = st.columns(3)
                 with col1:
@@ -343,7 +412,6 @@ else:
                             st.warning(f"Removed: {party_to_remove}")
                             st.rerun()
 
-            # TAB 2: ITEM MANAGEMENT
             with t2:
                 col1, col2, col3 = st.columns(3)
                 with col1:
@@ -373,7 +441,6 @@ else:
                             st.warning(f"Removed: {item_to_remove}")
                             st.rerun()
 
-            # TAB 3: SUPERVISOR ACCOUNTS
             with t3:
                 col_u1, col_u2, col_u3 = st.columns(3)
                 with col_u1:
@@ -389,9 +456,9 @@ else:
                                     st.success(f"Supervisor '{add_name}' Created!")
                                     st.rerun()
                                 else:
-                                    st.error("❌ Yeh ID pehle se bani hui hai!")
+                                    st.error("❌ ID exists!")
                             else:
-                                st.error("❌ Saari details bharna zaroori hai.")
+                                st.error("❌ All fields required.")
                                 
                 with col_u2:
                     st.markdown("**✏️ Edit Supervisor Info**")
@@ -408,10 +475,10 @@ else:
                             if edit_name and edit_pass:
                                 st.session_state["users"][selected_sup]["name"] = edit_name
                                 st.session_state["users"][selected_sup]["password"] = edit_pass
-                                st.success(f"ID `{selected_sup}` updated successfully!")
+                                st.success("Account updated!")
                                 st.rerun()
                     else:
-                        st.info("Koi supervisor account nahi mila.")
+                        st.info("No supervisors setup.")
                         
                 with col_u3:
                     st.markdown("**❌ Remove Supervisor**")
@@ -419,12 +486,7 @@ else:
                         sup_to_remove = st.selectbox("Select ID to Delete", sups_only, key="sel_sup_rem")
                         if st.button("Delete Supervisor Account", type="primary"):
                             del st.session_state["users"][sup_to_remove]
-                            st.warning(f"ID `{sup_to_remove}` deleted hamesha ke liye!")
+                            st.warning("Account deleted!")
                             st.rerun()
                     else:
                         st.info("No accounts to delete.")
-                    
-                    st.markdown("---")
-                    st.markdown("**👥 Current Active List:**")
-                    for u_id, u_info in st.session_state["users"].items():
-                        st.write(f"- `{u_id}` : {u_info['name']}")
