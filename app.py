@@ -166,10 +166,11 @@ if not st.session_state["logged_in"]:
             background-position: center;
             background-attachment: fixed;
         }}
+        st.markdown("""
+    <style>
         div[data-testid="stForm"] label { color: #FFFFFF !important; }
     </style>
-    """, unsafe_allow_html=True)
-    
+    """, unsafe_allow_html=True)    
     st.markdown('<h1 class="brand-title">COLOUR TEXTILE</h1>', unsafe_allow_html=True)
     st.markdown('<p style="text-align: center; color: #BDC3C7; font-size: 13px; margin-top: -5px; margin-bottom: 40px; font-weight: 500; letter-spacing: 1px;">SAREE WEAVING & PRODUCTION ERP</p>', unsafe_allow_html=True)
     
