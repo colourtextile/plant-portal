@@ -1,82 +1,68 @@
-import streamlit as st
-import pandas as pd
-import openpyxl
-from datetime import datetime
-import os
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
-import io
-
-# --- CONFIGURATION ---
-EXCEL_FILE = "Final_Plant_System_With_All_Dropdowns.xlsx"
-st.set_page_config(page_title="Colour Textile Portal", layout="wide")
-
-# (Style code waisa hi rakhein jaisa aapne bheja tha)
-st.markdown("""
-<style>
-    .global-header { text-align: center; font-weight: 800; font-size: 44px; background: linear-gradient(45deg, #FF5733, #FFC300); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .sidebar-brand-box { background: linear-gradient(135deg, #1F4E79, #2c3e50); padding: 18px; border-radius: 8px; color: white; text-align: center; }
-    .dashboard-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-</style>
-""", unsafe_allow_html=True)
-
-# --- SESSION STATES ---
-if "users" not in st.session_state:
-    st.session_state["users"] = {
-        "admin": {"password": "plant123", "name": "Admin Master", "role": "admin", "p_entry": True, "p_view": True, "p_edit": True}
-    }
-if "party_options" not in st.session_state:
-    st.session_state["party_options"] = ["Krishna Textiles", "Balaji Fabrics", "Radhe Shyam Corp"]
-if "item_options" not in st.session_state:
-    st.session_state["item_options"] = ["SAREE", "SUIT", "DUPATTA", "ONLY TOP"]
-if "logged_in" not in st.session_state:
-    st.session_state["logged_in"] = False
-
-# --- DASHBOARD LOGIC ---
-if st.session_state["logged_in"]:
-    st.markdown('<h1 class="global-header">COLOUR TEXTILE</h1>', unsafe_allow_html=True)
-    
-    # 📅 Filter Range
-    filter_type = st.radio("📅 Select Dashboard Filter Range:", ["☀️ Day-Wise Filter", "📆 Month-Wise Filter"], horizontal=True)
-    
-    # Logic to load and filter data
-    if os.path.exists(EXCEL_FILE):
-        df = pd.read_excel(EXCEL_FILE, sheet_name="Supervisor Entry")
-        df['Date'] = df['Date'].astype(str).str.strip()
-        df['parsed_date'] = pd.to_datetime(df['Date'], format='%d-%m-%Y', errors='coerce')
-        df['Month_Year'] = df['parsed_date'].dt.strftime('%B %Y')
-
-        if filter_type == "☀️ Day-Wise Filter":
-            sel_date = st.date_input("Choose Date", datetime.now()).strftime("%d-%m-%Y")
-            filtered_df = df[df["Date"] == sel_date]
-            label = f"SELECTED DATE: {sel_date}"
+# --- DASHBOARD LOGIC (Updated for 0-Hide & Party Summary) ---
         else:
-            months = sorted(df['Month_Year'].dropna().unique())
-            sel_month = st.selectbox("Choose Month", months)
-            filtered_df = df[df["Month_Year"] == sel_month]
-            label = f"SELECTED MONTH: {sel_month.upper()}"
-
-        if not filtered_df.empty:
-            # --- 1. ITEM SUMMARY (0 Hide Logic) ---
-            item_summary = filtered_df.groupby('Item Type')['Total Pcs'].sum().reset_index()
-            item_summary = item_summary[item_summary['Total Pcs'] > 0]
+            st.markdown("<h2 style='color: #1F4E79; font-weight: bold; margin-top: -10px;'>📊 Live Analytics Dashboard</h2>", unsafe_allow_html=True)
             
-            # --- 2. PARTY SUMMARY (New) ---
-            party_summary = filtered_df.groupby('Party Name')['Total Pcs'].sum().reset_index()
-            party_summary = party_summary[party_summary['Total Pcs'] > 0]
+            # --- 📅 1. CHOOSE FILTER RANGE ---
+            st.markdown("### 🎛️ Filter Range Selection")
+            filter_type = st.radio("📅 Select Dashboard Filter Range:", ["☀️ Day-Wise Filter", "📆 Month-Wise Filter"], horizontal=True)
+            
+            filtered_df_by_range = pd.DataFrame()
+            display_range_label = ""
+            
+            if excel_loaded and not df.empty:
+                df['Item Type'] = df['Item Type'].astype(str).str.upper().str.strip()
+                df['Party Name'] = df['Party Name'].astype(str).str.strip()
+                df['Date'] = df['Date'].astype(str).str.strip()
+                df['parsed_date'] = pd.to_datetime(df['Date'], format='%d-%m-%Y', errors='coerce')
+                df['Month_Year'] = df['parsed_date'].dt.strftime('%B %Y')
+            
+            if filter_type == "☀️ Day-Wise Filter":
+                selected_filter_date = st.date_input("Choose Specific Date to View Summary", datetime.now())
+                formatted_filter_date = selected_filter_date.strftime('%d-%m-%Y')
+                display_range_label = f"SELECTED DATE: {formatted_filter_date}"
+                if excel_loaded and not df.empty:
+                    filtered_df_by_range = df[df['Date'] == formatted_filter_date]
+            else:
+                current_month_year = datetime.now().strftime('%B %Y')
+                available_months = sorted(list(df['Month_Year'].dropna().unique())) if excel_loaded else []
+                if current_month_year not in available_months: available_months.append(current_month_year)
+                selected_month = st.selectbox("Choose Month and Year to View Summary", available_months)
+                display_range_label = f"SELECTED MONTH: {selected_month.upper()}"
+                if excel_loaded and not df.empty:
+                    filtered_df_by_range = df[df['Month_Year'] == selected_month]
 
-            col1, col2 = st.columns(2)
+            # Aggregating values
+            if not filtered_df_by_range.empty:
+                item_groups = filtered_df_by_range.groupby('Item Type')['Total Pcs'].sum()
+                party_groups = filtered_df_by_range.groupby('Party Name')['Total Pcs'].sum()
+                
+                # Zero-Value Filter: Sirf wo jinki value > 0 hai
+                item_groups = item_groups[item_groups > 0]
+                party_groups = party_groups[party_groups > 0]
+            else:
+                item_groups = pd.Series()
+                party_groups = pd.Series()
 
-            with col1:
-                st.markdown(f"### 🏭 ITEM PIECES SUMMARY ({label})")
-                st.table(item_summary.rename(columns={'Item Type': 'Item', 'Total Pcs': 'Pcs'}))
-                st.success(f"TOTAL PRODUCED: {item_summary['Total Pcs'].sum()} Pcs")
+            col_left, col_right = st.columns([1, 1])
+            
+            # --- ITEM PIECES SUMMARY ---
+            with col_left:
+                st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
+                st.markdown(f"### 🏭 ITEM PIECES SUMMARY\n**{display_range_label}**")
+                if not item_groups.empty:
+                    st.table(item_groups.reset_index().rename(columns={'Item Type': 'Item', 'Total Pcs': 'Pcs'}))
+                    st.success(f"TOTAL PRODUCED: {int(item_groups.sum()):,} Pcs")
+                else:
+                    st.info("No production data available for this range.")
+                st.markdown('</div>', unsafe_allow_html=True)
 
-            with col2:
-                st.markdown(f"### 📦 PARTY WISE SUMMARY ({label})")
-                st.table(party_summary.rename(columns={'Party Name': 'Party', 'Total Pcs': 'Pcs'}))
-                st.info(f"TOTAL DISPATCH: {party_summary['Total Pcs'].sum()} Pcs")
-        else:
-            st.warning("No data found for the selected filter.")
+            # --- PARTY WISE SUMMARY (Naya Section) ---
+            with col_right:
+                st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
+                st.markdown(f"### 📦 PARTY WISE SUMMARY\n**{display_range_label}**")
+                if not party_groups.empty:
+                    st.table(party_groups.reset_index().rename(columns={'Party Name': 'Party', 'Total Pcs': 'Pcs'}))
+                    st.info(f"TOTAL DISPATCH: {int(party_groups.sum()):,} Pcs")
+                else:
+                    st.info("No party dispatch data available.")
+                st.markdown('</div>', unsafe_allow_html=True)
