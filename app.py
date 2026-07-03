@@ -734,3 +734,18 @@ else:
 
 for _ in range(50):
     st.sidebar.text("")
+import streamlit as st
+import pandas as pd
+import os
+import json
+
+# --- PAGE CONFIG ---
+st.set_page_config(page_title="Colour Textile ERP", layout="wide")
+
+# --- HIDE SIDEBAR ONLY ON LOGIN ---
+if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
+    st.markdown("""
+        <style>
+            [data-testid="stSidebar"] { display: none !important; }
+        </style>
+    """, unsafe_allow_html=True)
