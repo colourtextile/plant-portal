@@ -18,6 +18,22 @@ st.set_page_config(page_title="Colour Textile Portal", layout="wide")
 # --- 💅 PREMIUM GLOBAL STYLING & FIXES ---
 st.markdown("""
 <style>
+    /* PREMIUM SIDEBAR STYLING */
+    [data-testid="stSidebar"] {
+        background-color: #0f172a !important;
+        padding: 20px 10px;
+    }
+    
+    .premium-sidebar-header {
+        background: linear-gradient(135deg, #1e293b, #334155);
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        border-left: 5px solid #38bdf8;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        text-align: center;
+    }
+    
     .user-chip {
         display: inline-block;
         background: #0ea5e9;
@@ -715,3 +731,6 @@ else:
                 st.dataframe(pd.DataFrame(target_summary_data), use_container_width=True)
             else:
                 st.info("No active supervisor targets found in the system.")
+
+for _ in range(50):
+    st.sidebar.text("")
