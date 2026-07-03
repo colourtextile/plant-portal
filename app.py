@@ -326,36 +326,90 @@ else:
                         wb.save(EXCEL_FILE)
                         st.success("🎉 Entry Saved Successfully!")
 
-        # --- EDIT & DELETE (YOUR MAIN REQUIREMENT - FULLY SECURED) ---
+        # --- EDIT & DELETE (ROW-WISE FORM SYSTEM) ---
         elif nav_choice == "📋 Edit & Delete Records":
-            st.subheader("📋 Edit & Delete Logged Records")
-            st.info("💡 **Kaise use karein:** Table mein directly click karke edit karein. Delete karne ke liye row ke aage left side mein click karke select karein aur keyboard pe 'Delete' daba dein. Phir 'Save Changes' par click karein.")
+            st.subheader("📋 Edit & Delete Logged Records (Row-Wise)")
+            st.info("💡 **Kaise use karein:** Niche drop-down list se jis entry (row) ko aapko edit ya delete karna hai use select karein. Uski puri details form mein aa jayengi. Change karke Update ya Delete dabayein.")
+            
             if excel_loaded and not df.empty:
-                # Sirf admin ya jiske paas edit permission ho wahi sab dekh sakta hai
+                # Permissions ke hisaab se data filter karein
                 if user["role"] != "admin":
-                    display_df = df[df["Supervisor"] == user["name"]]
+                    display_df = df[df["Supervisor"] == user["name"]].copy()
                 else:
-                    display_df = df
+                    display_df = df.copy()
                     
                 if not display_df.empty:
-                    edited_df = st.data_editor(display_df, num_rows="dynamic", use_container_width=True, key="data_editor")
-                    if st.button("💾 Save All Modifications to Database"):
-                        try:
-                            # Update main dataframe
-                            if user["role"] == "admin":
-                                final_df = edited_df
-                            else:
-                                final_df = pd.concat([df[df["Supervisor"] != user["name"]], edited_df], ignore_index=True)
-                                
-                            final_df.to_excel(EXCEL_FILE, sheet_name="Supervisor Entry", index=False)
-                            st.success("✅ System Database successfully updated!")
+                    # Dropdown ke liye har row ka ek asaan naam banayein
+                    options = []
+                    for idx, row in display_df.iterrows():
+                        options.append(f"Row ID: {idx} | Date: {row['Date']} | Design: {row['Design No']} | Party: {row['Party Name']} | Pcs: {row['Total Pcs']}")
+                    
+                    selected_option = st.selectbox("🔍 Select Entry to Modify:", options)
+                    selected_idx = int(selected_option.split(" | ")[0].replace("Row ID: ", ""))
+                    row_data = df.loc[selected_idx]
+                    
+                    st.markdown(f"### ✏️ Update Entry Details (Row ID: {selected_idx})")
+                    
+                    # Form jisme chuni hui row ka poora data aayega
+                    with st.form("edit_row_form"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            e_date = st.text_input("Date (DD-MM-YYYY)", value=str(row_data["Date"]))
+                            e_challan = st.text_input("Challan No", value=str(row_data["Challan No"]))
+                            e_design = st.text_input("Design No", value=str(row_data["Design No"]))
+                            
+                            # Party Name handle karna
+                            p_val = str(row_data["Party Name"])
+                            p_index = st.session_state["party_options"].index(p_val) if p_val in st.session_state["party_options"] else 0
+                            e_party = st.selectbox("Party Name", st.session_state["party_options"], index=p_index)
+                            
+                        with col2:
+                            # Item Type handle karna
+                            i_val = str(row_data["Item Type"])
+                            i_index = st.session_state["item_options"].index(i_val) if i_val in st.session_state["item_options"] else 0
+                            e_item = st.selectbox("Item Type", st.session_state["item_options"], index=i_index)
+                            
+                            e_total = st.number_input("Total Pcs", value=int(row_data["Total Pcs"]), step=1)
+                            e_fresh = st.number_input("Fresh Pcs", value=int(row_data["Fresh Pcs"]), step=1)
+                            e_seconds = st.number_input("Seconds Pcs", value=int(row_data["Seconds Pcs"]), step=1)
+                        
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        btn_col1, btn_col2 = st.columns(2)
+                        with btn_col1:
+                            update_btn = st.form_submit_button("💾 UPDATE THIS RECORD", use_container_width=True)
+                        with btn_col2:
+                            delete_btn = st.form_submit_button("❌ DELETE THIS RECORD", use_container_width=True)
+                            
+                    # Update Button Action
+                    if update_btn:
+                        if e_fresh + e_seconds != e_total:
+                            st.error("❌ Total mismatch! (Fresh + Seconds) must be equal to Total Pcs.")
+                        else:
+                            df.at[selected_idx, "Date"] = e_date
+                            df.at[selected_idx, "Challan No"] = e_challan
+                            df.at[selected_idx, "Design No"] = e_design
+                            df.at[selected_idx, "Party Name"] = e_party
+                            df.at[selected_idx, "Item Type"] = e_item
+                            df.at[selected_idx, "Total Pcs"] = e_total
+                            df.at[selected_idx, "Fresh Pcs"] = e_fresh
+                            df.at[selected_idx, "Seconds Pcs"] = e_seconds
+                            
+                            # Excel mein save karein
+                            df.to_excel(EXCEL_FILE, sheet_name="Supervisor Entry", index=False)
+                            st.success("✅ Record successfully updated in Database!")
                             st.rerun()
-                        except Exception as e:
-                            st.error(f"Error saving data: {e}")
+                            
+                    # Delete Button Action
+                    if delete_btn:
+                        df = df.drop(index=selected_idx)
+                        df.to_excel(EXCEL_FILE, sheet_name="Supervisor Entry", index=False)
+                        st.warning("🗑️ Record successfully deleted from Database!")
+                        st.rerun()
+                        
                 else:
                     st.warning("No records available to edit for your account.")
             else:
-                st.warning("Excel file is empty or missing.")
+                st.warning("Excel file is empty or missing. Please make entries first.")
 
         # --- CONFIGURATIONS DESK FOR ADMIN ---
         elif user["role"] == "admin" and nav_choice == "⚙️ Factory Config":
