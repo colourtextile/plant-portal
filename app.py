@@ -731,6 +731,150 @@ else:
                 st.dataframe(pd.DataFrame(target_summary_data), use_container_width=True)
             else:
                 st.info("No active supervisor targets found in the system.")
+import streamlit as st
+import pandas as pd
+import openpyxl
+import os
+import json
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
+import io
 
+# --- PAGE CONFIG ---
+st.set_page_config(page_title="Colour Textile ERP", layout="wide")
+
+# --- CSS: HIDE SIDEBAR ON LOGIN ---
+if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
+    st.markdown("""<style>[data-testid="stSidebar"] { display: none !important; }</style>""", unsafe_allow_html=True)
+
+# --- CONFIG & DATA LOAD ---
+EXCEL_FILE = "Final_Plant_System_With_All_Dropdowns.xlsx"
+CONFIG_FILE = "system_config.json"
+
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f)
+    return {
+        "users": {"admin": {"password": "123", "name": "Admin", "role": "admin", "p_edit": True}},
+        "supervisor_targets": {}, "party_options": [], "item_options": [],
+        "email_config": {"sender": "", "password": "", "receiver": ""}
+    }
+
+if "config" not in st.session_state:
+    st.session_state["config"] = load_config()
+
+# --- LOGIN LOGIC ---
+if "logged_in" not in st.session_state: st.session_state["logged_in"] = False
+
+if not st.session_state["logged_in"]:
+    st.title("🔐 Login Portal")
+    user_id = st.text_input("Username")
+    pwd = st.text_input("Password", type="password")
+    if st.button("Login"):
+        users = st.session_state["config"]["users"]
+        if user_id in users and users[user_id]["password"] == pwd:
+            st.session_state["logged_in"] = True
+            st.session_state["user_data"] = users[user_id]
+            st.rerun()
+        else:
+            st.error("Invalid ID/Password")
+else:
+    # --- LOGGED IN USER AREA ---
+    user = st.session_state["user_data"]
+    
+    # Sidebar
+    st.sidebar.title(f"👤 {user['name']}")
+    menu = ["📊 Dashboard", "📝 Data Entry", "📋 Records Management"]
+    if user["role"] == "admin": menu.extend(["🎯 Targets", "⚙️ Factory Config", "📧 Email Setup"])
+    choice = st.sidebar.radio("Navigation", menu)
+    
+    if st.sidebar.button("🚪 Logout"):
+        st.session_state["logged_in"] = False
+        st.rerun()
+
+    # --- LOAD DATA ---
+    if os.path.exists(EXCEL_FILE):
+        df = pd.read_excel(EXCEL_FILE)
+    else:
+        df = pd.DataFrame(columns=["Date", "Design", "Party", "Item", "Total", "Fresh", "Seconds", "Supervisor"])
+
+    # --- PRIVACY: DATA ISOLATION ---
+    # Agar admin hai toh pura data, nahi toh sirf us supervisor ka data
+    if user["role"] == "admin":
+        display_df = df
+    else:
+        display_df = df[df["Supervisor"] == user["name"]]
+
+    # --- DASHBOARD ---
+    if choice == "📊 Dashboard":
+        st.header("📊 Dashboard")
+        st.dataframe(display_df, use_container_width=True)
+
+    # --- DATA ENTRY ---
+    elif choice == "📝 Data Entry":
+        st.header("📝 New Entry")
+        with st.form("entry_form"):
+            col1, col2 = st.columns(2)
+            d = col1.date_input("Date")
+            ds = col1.text_input("Design")
+            p = col1.selectbox("Party", st.session_state["config"]["party_options"])
+            it = col2.selectbox("Item", st.session_state["config"]["item_options"])
+            tot = col2.number_input("Total Pcs", 0)
+            fr = col2.number_input("Fresh Pcs", 0)
+            sec = col2.number_input("Seconds Pcs", 0)
+            
+            if st.form_submit_button("Save Entry"):
+                new_row = {"Date": d, "Design": ds, "Party": p, "Item": it, "Total": tot, "Fresh": fr, "Seconds": sec, "Supervisor": user["name"]}
+                df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+                df.to_excel(EXCEL_FILE, index=False)
+                st.success("Entry Saved!")
+                st.rerun()
+
+    # --- RECORDS MANAGEMENT (EDIT/DELETE) ---
+    elif choice == "📋 Records Management":
+        st.header("📋 Manage Records")
+        
+        # Reset Index for stability
+        temp_df = display_df.reset_index()
+        
+        for idx, row in temp_df.iterrows():
+            cols = st.columns([6, 1, 1])
+            cols[0].write(f"📅 {row['Date']} | Design: {row['Design']} | Total: {row['Total']}")
+            
+            # Button Logic
+            if cols[1].button("✏️ Edit", key=f"edit_{row['index']}"):
+                st.session_state["edit_idx"] = row['index']
+            if cols[2].button("🗑️ Delete", key=f"del_{row['index']}"):
+                df = df.drop(row['index'])
+                df.to_excel(EXCEL_FILE, index=False)
+                st.rerun()
+
+        # Update Form
+        if "edit_idx" in st.session_state:
+            idx = st.session_state["edit_idx"]
+            with st.form("update_form"):
+                new_tot = st.number_input("Edit Total Pcs", value=int(df.loc[idx, "Total"]))
+                if st.form_submit_button("Update"):
+                    df.at[idx, "Total"] = new_tot
+                    df.to_excel(EXCEL_FILE, index=False)
+                    del st.session_state["edit_idx"]
+                    st.success("Record Updated!")
+                    st.rerun()
+
+    # --- OTHER SECTIONS (Targets, Config, Email) ---
+    elif choice == "🎯 Targets" and user["role"] == "admin":
+        st.header("🎯 Targets")
+        # Logic for targets...
+        
+    elif choice == "⚙️ Factory Config" and user["role"] == "admin":
+        st.header("⚙️ Config")
+        # Logic for config...
+
+    elif choice == "📧 Email Setup" and user["role"] == "admin":
+        st.header("📧 Email")
+        # Logic for email...
 for _ in range(50):
     st.sidebar.text("")
