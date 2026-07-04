@@ -10,9 +10,11 @@ from email import encoders
 import io
 import json
 
+# --- CONSTANTS ---
 EXCEL_FILE = "Final_Plant_System_With_All_Dropdowns.xlsx"
 CONFIG_FILE = "system_config.json"
 
+# --- PAGE CONFIG ---
 st.set_page_config(page_title="Colour Textile Portal", layout="wide")
 
 # --- 💅 PREMIUM GLOBAL STYLING & FIXES ---
@@ -193,20 +195,22 @@ def send_daywise_backup_email():
         server.sendmail(cfg["sender"], cfg["receiver"], msg.as_string())
         server.close()
         return True
-    except Exception as e:
+    except Exception:
         return False
 
 # --- 🔒 MAIN APPLICATION LOGIN SCREEN ---
 if not st.session_state["logged_in"]:
-    st.markdown(f"""
+    # Hide sidebar & set background specifically on login
+    st.markdown("""
     <style>
-        .stApp {{
+        [data-testid="stSidebar"] { display: none !important; }
+        .stApp {
             background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url("https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?q=80&w=1920&auto=format&fit=crop");
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
-        }}
-        div[data-testid="stForm"] label {{ color: #FFFFFF !important; }}
+        }
+        div[data-testid="stForm"] label { color: #FFFFFF !important; }
     </style>
     """, unsafe_allow_html=True)
     
@@ -220,6 +224,7 @@ if not st.session_state["logged_in"]:
             password = st.text_input("Password", type="password", placeholder="••••••••")
             st.markdown("<br>", unsafe_allow_html=True)
             submit_login = st.form_submit_button("SECURE SYSTEM LOGIN", use_container_width=True)
+            
             if submit_login:
                 if username.strip() in st.session_state["users"] and st.session_state["users"][username.strip()]["password"] == password.strip():
                     st.session_state["logged_in"] = True
@@ -268,7 +273,7 @@ else:
                 ordered_cols = ["Date", "Challan No", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor"]
                 df = df[ordered_cols]
                 excel_loaded = True
-        except:
+        except Exception:
             pass
 
     # --- ⏰ 5 TIMES AUTO EMAIL BACKGROUND TRIGGER ---
@@ -314,6 +319,7 @@ else:
             st.subheader("🎯 Supervisor Target Configurations")
             all_users = list(st.session_state["users"].keys())
             sups_list = [st.session_state["users"][u]["name"] for u in all_users if st.session_state["users"][u]["role"] == "supervisor"]
+            
             if sups_list:
                 for sup_name in sups_list:
                     current_tgt = st.session_state["supervisor_targets"].get(sup_name, 500)
@@ -731,21 +737,3 @@ else:
                 st.dataframe(pd.DataFrame(target_summary_data), use_container_width=True)
             else:
                 st.info("No active supervisor targets found in the system.")
-
-for _ in range(50):
-    st.sidebar.text("")
-import streamlit as st
-import pandas as pd
-import os
-import json
-
-# --- PAGE CONFIG ---
-st.set_page_config(page_title="Colour Textile ERP", layout="wide")
-
-# --- HIDE SIDEBAR ONLY ON LOGIN ---
-if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
-    st.markdown("""
-        <style>
-            [data-testid="stSidebar"] { display: none !important; }
-        </style>
-    """, unsafe_allow_html=True)
