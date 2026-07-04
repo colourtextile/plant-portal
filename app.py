@@ -356,78 +356,64 @@ else:
                         wb.save(EXCEL_FILE)
                         st.success("🎉 Entry Saved Successfully!")
 
-        # --- EDIT & DELETE (ROW-WISE FORM SYSTEM) ---
+        # --- EDIT & DELETE (INTERACTIVE EXCEL-LIKE SYSTEM) ---
         elif nav_choice == "📋 Edit & Delete Records":
-            st.subheader("📋 Edit & Delete Logged Records (Row-Wise)")
-            st.info("💡 **Kaise use karein:** Niche drop-down list se jis entry (row) ko aapko edit ya delete karna hai use select karein. Uski puri details form mein aa jayengi. Change karke Update ya Delete dabayein.")
+            st.subheader("📋 Interactive Data Editor")
+            st.info("💡 **Kaise use karein:** Table ke andar directly click karke typing/edit karein. Row delete karne ke liye left side me row select karein aur upar 🗑️ (Delete) icon dabayein. Change karne ke baad 'Save Changes' button zaroor dabayein.")
             
             if excel_loaded and not df.empty:
                 if user["role"] != "admin":
-                    display_df = df[df["Supervisor"] == user["name"]].copy()
+                    # Fetch only the logged-in supervisor's data
+                    mask = df["Supervisor"] == user["name"]
+                    display_df = df[mask].copy()
                 else:
+                    # Admin sees everything
+                    mask = pd.Series(True, index=df.index)
                     display_df = df.copy()
                     
                 if not display_df.empty:
-                    options = []
-                    for idx, row in display_df.iterrows():
-                        options.append(f"Row ID: {idx} | Date: {row['Date']} | Design: {row['Design No']} | Party: {row['Party Name']} | Pcs: {row['Total Pcs']}")
+                    # Display interactive data editor (Like an Excel sheet in the browser)
+                    edited_df = st.data_editor(
+                        display_df,
+                        use_container_width=True,
+                        num_rows="dynamic", # Enables native row deletion (trash can icon)
+                        column_config={
+                            "Date": st.column_config.TextColumn("Date (DD-MM-YYYY)", required=True),
+                            "Party Name": st.column_config.SelectboxColumn("Party Name", options=st.session_state["party_options"], required=True),
+                            "Item Type": st.column_config.SelectboxColumn("Item Type", options=st.session_state["item_options"], required=True),
+                            "Total Pcs": st.column_config.NumberColumn("Total Pcs", required=True, min_value=0),
+                            "Fresh Pcs": st.column_config.NumberColumn("Fresh Pcs", required=True, min_value=0),
+                            "Seconds Pcs": st.column_config.NumberColumn("Seconds Pcs", required=True, min_value=0),
+                            "Supervisor": st.column_config.TextColumn("Supervisor", disabled=True) # Prevent changing owner
+                        },
+                        hide_index=True
+                    )
                     
-                    selected_option = st.selectbox("🔍 Select Entry to Modify:", options)
-                    selected_idx = int(selected_option.split(" | ")[0].replace("Row ID: ", ""))
-                    row_data = df.loc[selected_idx]
+                    st.markdown("<br>", unsafe_allow_html=True)
                     
-                    st.markdown(f"### ✏️ Update Entry Details (Row ID: {selected_idx})")
-                    
-                    with st.form("edit_row_form"):
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            e_date = st.text_input("Date (DD-MM-YYYY)", value=str(row_data["Date"]))
-                            e_challan = st.text_input("Challan No", value=str(row_data["Challan No"]))
-                            e_design = st.text_input("Design No", value=str(row_data["Design No"]))
-                            
-                            p_val = str(row_data["Party Name"])
-                            p_index = st.session_state["party_options"].index(p_val) if p_val in st.session_state["party_options"] else 0
-                            e_party = st.selectbox("Party Name", st.session_state["party_options"], index=p_index)
-                            
-                        with col2:
-                            i_val = str(row_data["Item Type"])
-                            i_index = st.session_state["item_options"].index(i_val) if i_val in st.session_state["item_options"] else 0
-                            e_item = st.selectbox("Item Type", st.session_state["item_options"], index=i_index)
-                            
-                            e_total = st.number_input("Total Pcs", value=int(row_data["Total Pcs"]), step=1)
-                            e_fresh = st.number_input("Fresh Pcs", value=int(row_data["Fresh Pcs"]), step=1)
-                            e_seconds = st.number_input("Seconds Pcs", value=int(row_data["Seconds Pcs"]), step=1)
+                    if st.button("💾 SAVE ALL CHANGES TO DATABASE", type="primary", use_container_width=True):
+                        # Validation: Check if any row has mismatched Pcs
+                        invalid_rows = edited_df[(edited_df["Fresh Pcs"] + edited_df["Seconds Pcs"]) != edited_df["Total Pcs"]]
                         
-                        st.markdown("<br>", unsafe_allow_html=True)
-                        btn_col1, btn_col2 = st.columns(2)
-                        with btn_col1:
-                            update_btn = st.form_submit_button("💾 UPDATE THIS RECORD", use_container_width=True)
-                        with btn_col2:
-                            delete_btn = st.form_submit_button("❌ DELETE THIS RECORD", use_container_width=True)
-                            
-                    if update_btn:
-                        if e_fresh + e_seconds != e_total:
-                            st.error("❌ Total mismatch! (Fresh + Seconds) must be equal to Total Pcs.")
+                        if not invalid_rows.empty:
+                            st.error("❌ Error: Kuch entries mein (Fresh Pcs + Seconds Pcs) Total Pcs ke barabar nahi hai. Kripya table check karein aur wapas save dabayein!")
                         else:
-                            df.at[selected_idx, "Date"] = e_date
-                            df.at[selected_idx, "Challan No"] = e_challan
-                            df.at[selected_idx, "Design No"] = e_design
-                            df.at[selected_idx, "Party Name"] = e_party
-                            df.at[selected_idx, "Item Type"] = e_item
-                            df.at[selected_idx, "Total Pcs"] = e_total
-                            df.at[selected_idx, "Fresh Pcs"] = e_fresh
-                            df.at[selected_idx, "Seconds Pcs"] = e_seconds
+                            # Re-integrate into main database based on permissions
+                            if user["role"] != "admin":
+                                # Remove old records for this user and append the new edited ones
+                                df = df[~mask] 
+                                df = pd.concat([df, edited_df], ignore_index=True)
+                            else:
+                                df = edited_df.copy()
                             
+                            # Maintain correct column order
+                            ordered_cols = ["Date", "Challan No", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor"]
+                            df = df[ordered_cols]
+                            
+                            # Save to Excel
                             df.to_excel(EXCEL_FILE, sheet_name="Supervisor Entry", index=False)
-                            st.success("✅ Record successfully updated in Database!")
+                            st.success("✅ Database Successfully Updated! Records changed permanently.")
                             st.rerun()
-                            
-                    if delete_btn:
-                        df = df.drop(index=selected_idx)
-                        df.to_excel(EXCEL_FILE, sheet_name="Supervisor Entry", index=False)
-                        st.warning("🗑️ Record successfully deleted from Database!")
-                        st.rerun()
-                        
                 else:
                     st.warning("No records available to edit for your account.")
             else:
