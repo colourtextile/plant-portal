@@ -105,6 +105,16 @@ st.markdown("""
         margin-bottom: 20px;
         border: 1px solid #eef2f5;
     }
+    
+    /* CUSTOM TABLE ROW STYLING */
+    .custom-row {
+        padding: 10px 0px;
+        border-bottom: 1px solid #e2e8f0;
+        align-items: center;
+    }
+    .custom-row:hover {
+        background-color: #f1f5f9;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -155,6 +165,23 @@ if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 if "current_user" not in st.session_state:
     st.session_state["current_user"] = None
+if "edit_row_id" not in st.session_state:
+    st.session_state["edit_row_id"] = None
+
+# --- 🗑️ POPUP DIALOG FOR DELETE CONFIRMATION ---
+@st.dialog("⚠️ Confirm Delete")
+def delete_entry_dialog(entry_id, df_current):
+    st.error(f"Kya aap pakka **{entry_id}** ka data delete karna chahte hain?")
+    st.markdown("Yeh action wapas nahi liya ja sakta (Undone nahi hoga).")
+    
+    col_yes, col_no = st.columns(2)
+    if col_yes.button("✅ Yes, Delete", type="primary", use_container_width=True):
+        df_new = df_current[df_current["Entry ID"] != entry_id]
+        df_new.to_excel(EXCEL_FILE, sheet_name="Supervisor Entry", index=False)
+        st.success(f"{entry_id} Successfully Deleted!")
+        st.rerun()
+    if col_no.button("❌ No, Cancel", use_container_width=True):
+        st.rerun()
 
 # --- 📧 HELPER FUNCTION TO SEND DAY-WISE DATA EMAIL ---
 def send_daywise_backup_email():
@@ -200,7 +227,6 @@ def send_daywise_backup_email():
 
 # --- 🔒 MAIN APPLICATION LOGIN SCREEN ---
 if not st.session_state["logged_in"]:
-    # Hide sidebar & set background specifically on login
     st.markdown("""
     <style>
         [data-testid="stSidebar"] { display: none !important; }
@@ -259,22 +285,46 @@ else:
         
     nav_choice = st.sidebar.radio("🧭 Navigation Menu", nav_options)
         
+    # --- DATA & COLUMN MIGRATION LOGIC ---
     excel_loaded = False
     df = pd.DataFrame()
+    ORDERED_COLS = ["Entry ID", "Date", "Challan No", "Design No", "Sell Order", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor"]
+
     if os.path.exists(EXCEL_FILE):
         try:
             df = pd.read_excel(EXCEL_FILE, sheet_name="Supervisor Entry")
             if not df.empty:
-                if df.shape[1] == 8:
-                    df.columns = ["Date", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor"]
-                    df["Challan No"] = "-" 
-                elif df.shape[1] == 9:
-                    df.columns = ["Date", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor", "Challan No"]
-                ordered_cols = ["Date", "Challan No", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor"]
-                df = df[ordered_cols]
-                excel_loaded = True
-        except Exception:
-            pass
+                data_updated = False
+                
+                # Check for Entry ID
+                if "Entry ID" not in df.columns:
+                    df.insert(0, "Entry ID", [f"E-{1001+i}" for i in range(len(df))])
+                    data_updated = True
+                    
+                # Check for Sell Order
+                if "Sell Order" not in df.columns:
+                    df["Sell Order"] = "-"
+                    data_updated = True
+                    
+                # Check for Challan No
+                if "Challan No" not in df.columns:
+                    df["Challan No"] = "-"
+                    data_updated = True
+                
+                # Enforce structure
+                for col in ORDERED_COLS:
+                    if col not in df.columns:
+                        df[col] = "-"
+                        data_updated = True
+                        
+                df = df[ORDERED_COLS]
+                
+                if data_updated:
+                    df.to_excel(EXCEL_FILE, sheet_name="Supervisor Entry", index=False)
+                    
+            excel_loaded = True
+        except Exception as e:
+            st.error(f"Error loading Excel: {e}")
 
     # --- ⏰ 5 TIMES AUTO EMAIL BACKGROUND TRIGGER ---
     now_time = datetime.now().strftime("%H:%M")
@@ -289,8 +339,8 @@ else:
         st.session_state["current_user"] = None
         st.rerun()
 
-    if not os.path.exists(EXCEL_FILE):
-        st.error(f"Excel file '{EXCEL_FILE}' nahi mili! System ke folders check karein.")
+    if not os.path.exists(EXCEL_FILE) and nav_choice not in ["📝 Data Entry", "⚙️ Factory Config"]:
+        st.error(f"Excel file '{EXCEL_FILE}' nahi mili! Please make a Data Entry first to generate it.")
     else:
         # --- 📧 EMAIL AUTO-BACKUP CONFIG PANEL ---
         if user["role"] == "admin" and nav_choice == "📧 Setup Email Auto-Backup":
@@ -304,7 +354,7 @@ else:
                 
                 if st.form_submit_button("Save Email Settings"):
                     st.session_state["email_config"] = {"sender": sender, "password": password, "receiver": receiver}
-                    save_config()  # Save permanently
+                    save_config() # Save permanently
                     st.success("✅ Email Configuration Settings Saved Locally!")
             
             if st.button("🚀 Test Send Instant Day-wise Data Now"):
@@ -333,91 +383,184 @@ else:
         # --- DATA ENTRY LOGIC ---
         elif nav_choice == "📝 Data Entry":
             st.subheader(f"📝 Quick Data Entry Panel ({user['name']})")
+            
+            # Generate next Unique Entry ID
+            next_id = "E-1001"
+            if excel_loaded and not df.empty and "Entry ID" in df.columns:
+                try:
+                    last_id_str = df["Entry ID"].iloc[-1]
+                    next_id = f"E-{int(last_id_str.split('-')[1]) + 1}"
+                except:
+                    next_id = f"E-{1000 + len(df) + 1}"
+            
             with st.form("entry_form", clear_on_submit=True):
-                col1, col2 = st.columns(2)
+                st.text_input("Auto-Generated Unique Entry ID", value=next_id, disabled=True)
+                
+                col1, col2, col3 = st.columns(3)
                 with col1:
                     date_input = st.date_input("Select Date", datetime.now())
+                    party_name = st.selectbox("Select Party Name", st.session_state["party_options"])
+                    item_type = st.selectbox("Select Fabric / Item", st.session_state["item_options"])
+                with col2:
                     challan_no = st.text_input("Enter Challan Number", placeholder="e.g. CH-9921")
                     design_no = st.text_input("Enter Design Number", placeholder="e.g. D-401")
-                    party_name = st.selectbox("Select Party Name Account", st.session_state["party_options"])
-                with col2:
-                    item_type = st.selectbox("Select Fabric / Item Type", st.session_state["item_options"])
-                    total_pcs = st.number_input("Total Pieces Count", min_value=0, step=1)
-                    fresh_pcs = st.number_input("Fresh Quality Pieces", min_value=0, step=1)
-                    seconds_pcs = st.number_input("Seconds Damage Pieces", min_value=0, step=1)
+                    sell_order = st.text_input("Enter Sell Order", placeholder="e.g. SO-12345")
+                with col3:
+                    total_pcs = st.number_input("Total Pieces", min_value=0, step=1)
+                    fresh_pcs = st.number_input("Fresh Pieces", min_value=0, step=1)
+                    seconds_pcs = st.number_input("Seconds Damage Pcs", min_value=0, step=1)
                 
-                if st.form_submit_button("SAVE ENTRY"):
+                if st.form_submit_button("SAVE ENTRY", type="primary", use_container_width=True):
                     if fresh_pcs + seconds_pcs != total_pcs:
                         st.error("❌ Total mismatch! (Fresh + Seconds) must be equal to Total Pcs.")
                     else:
-                        wb = openpyxl.load_workbook(EXCEL_FILE)
-                        ws = wb["Supervisor Entry"]
-                        ws.append([date_input.strftime("%d-%m-%Y"), design_no, party_name, item_type, total_pcs, fresh_pcs, seconds_pcs, user["name"], challan_no])
-                        wb.save(EXCEL_FILE)
-                        st.success("🎉 Entry Saved Successfully!")
-
-        # --- EDIT & DELETE (INTERACTIVE EXCEL-LIKE SYSTEM) ---
-        elif nav_choice == "📋 Edit & Delete Records":
-            st.subheader("📋 Interactive Data Editor")
-            st.info("💡 **Kaise use karein:** Table ke andar directly click karke typing/edit karein. Row delete karne ke liye left side me row select karein aur upar 🗑️ (Delete) icon dabayein. Change karne ke baad 'Save Changes' button zaroor dabayein.")
-            
-            if excel_loaded and not df.empty:
-                if user["role"] != "admin":
-                    # Fetch only the logged-in supervisor's data
-                    mask = df["Supervisor"] == user["name"]
-                    display_df = df[mask].copy()
-                else:
-                    # Admin sees everything
-                    mask = pd.Series(True, index=df.index)
-                    display_df = df.copy()
-                    
-                if not display_df.empty:
-                    # Display interactive data editor (Like an Excel sheet in the browser)
-                    edited_df = st.data_editor(
-                        display_df,
-                        use_container_width=True,
-                        num_rows="dynamic", # Enables native row deletion (trash can icon)
-                        column_config={
-                            "Date": st.column_config.TextColumn("Date (DD-MM-YYYY)", required=True),
-                            "Party Name": st.column_config.SelectboxColumn("Party Name", options=st.session_state["party_options"], required=True),
-                            "Item Type": st.column_config.SelectboxColumn("Item Type", options=st.session_state["item_options"], required=True),
-                            "Total Pcs": st.column_config.NumberColumn("Total Pcs", required=True, min_value=0),
-                            "Fresh Pcs": st.column_config.NumberColumn("Fresh Pcs", required=True, min_value=0),
-                            "Seconds Pcs": st.column_config.NumberColumn("Seconds Pcs", required=True, min_value=0),
-                            "Supervisor": st.column_config.TextColumn("Supervisor", disabled=True) # Prevent changing owner
-                        },
-                        hide_index=True
-                    )
-                    
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    
-                    if st.button("💾 SAVE ALL CHANGES TO DATABASE", type="primary", use_container_width=True):
-                        # Validation: Check if any row has mismatched Pcs
-                        invalid_rows = edited_df[(edited_df["Fresh Pcs"] + edited_df["Seconds Pcs"]) != edited_df["Total Pcs"]]
+                        new_row_data = {
+                            "Entry ID": next_id,
+                            "Date": date_input.strftime("%d-%m-%Y"),
+                            "Challan No": challan_no,
+                            "Design No": design_no,
+                            "Sell Order": sell_order,
+                            "Party Name": party_name,
+                            "Item Type": item_type,
+                            "Total Pcs": total_pcs,
+                            "Fresh Pcs": fresh_pcs,
+                            "Seconds Pcs": seconds_pcs,
+                            "Supervisor": user["name"]
+                        }
                         
-                        if not invalid_rows.empty:
-                            st.error("❌ Error: Kuch entries mein (Fresh Pcs + Seconds Pcs) Total Pcs ke barabar nahi hai. Kripya table check karein aur wapas save dabayein!")
+                        if not os.path.exists(EXCEL_FILE):
+                            # Create new excel
+                            temp_df = pd.DataFrame([new_row_data])
+                            temp_df = temp_df[ORDERED_COLS]
+                            temp_df.to_excel(EXCEL_FILE, sheet_name="Supervisor Entry", index=False)
                         else:
-                            # Re-integrate into main database based on permissions
-                            if user["role"] != "admin":
-                                # Remove old records for this user and append the new edited ones
-                                df = df[~mask] 
-                                df = pd.concat([df, edited_df], ignore_index=True)
+                            # Append to existing
+                            wb = openpyxl.load_workbook(EXCEL_FILE)
+                            ws = wb["Supervisor Entry"]
+                            ws.append([new_row_data[col] for col in ORDERED_COLS])
+                            wb.save(EXCEL_FILE)
+                            
+                        st.success(f"🎉 Entry {next_id} Saved Successfully!")
+                        st.rerun()
+
+        # --- EDIT & DELETE LOGIC (CUSTOM BUTTONS ROW BY ROW) ---
+        elif nav_choice == "📋 Edit & Delete Records":
+            st.subheader("📋 Custom Edit & Delete Control")
+            
+            # STATE 1: If an Entry is being edited, show the EDIT FORM
+            if st.session_state["edit_row_id"]:
+                eid = st.session_state["edit_row_id"]
+                st.markdown(f"### ✏️ Editing Record: {eid}")
+                
+                row_data = df[df["Entry ID"] == eid].iloc[0]
+                
+                with st.form("edit_record_form"):
+                    e_col1, e_col2, e_col3 = st.columns(3)
+                    with e_col1:
+                        # Convert string date to datetime for date_input
+                        try:
+                            parsed_d = datetime.strptime(row_data["Date"], "%d-%m-%Y").date()
+                        except:
+                            parsed_d = datetime.now().date()
+                            
+                        ed_date = st.date_input("Date", parsed_d)
+                        
+                        p_idx = st.session_state["party_options"].index(row_data["Party Name"]) if row_data["Party Name"] in st.session_state["party_options"] else 0
+                        ed_party = st.selectbox("Party Name", st.session_state["party_options"], index=p_idx)
+                        
+                        i_idx = st.session_state["item_options"].index(row_data["Item Type"]) if row_data["Item Type"] in st.session_state["item_options"] else 0
+                        ed_item = st.selectbox("Item Type", st.session_state["item_options"], index=i_idx)
+                        
+                    with e_col2:
+                        ed_challan = st.text_input("Challan Number", str(row_data["Challan No"]))
+                        ed_design = st.text_input("Design Number", str(row_data["Design No"]))
+                        ed_sell = st.text_input("Sell Order", str(row_data.get("Sell Order", "-")))
+                        
+                    with e_col3:
+                        ed_total = st.number_input("Total Pieces", value=int(row_data["Total Pcs"]), step=1)
+                        ed_fresh = st.number_input("Fresh Pieces", value=int(row_data["Fresh Pcs"]), step=1)
+                        ed_seconds = st.number_input("Seconds Pcs", value=int(row_data["Seconds Pcs"]), step=1)
+                        
+                    submit_col1, submit_col2 = st.columns(2)
+                    with submit_col1:
+                        if st.form_submit_button("💾 UPDATE RECORD", type="primary", use_container_width=True):
+                            if ed_fresh + ed_seconds != ed_total:
+                                st.error("❌ Mismatch: Fresh + Seconds must equal Total Pcs.")
                             else:
-                                df = edited_df.copy()
-                            
-                            # Maintain correct column order
-                            ordered_cols = ["Date", "Challan No", "Design No", "Party Name", "Item Type", "Total Pcs", "Fresh Pcs", "Seconds Pcs", "Supervisor"]
-                            df = df[ordered_cols]
-                            
-                            # Save to Excel
-                            df.to_excel(EXCEL_FILE, sheet_name="Supervisor Entry", index=False)
-                            st.success("✅ Database Successfully Updated! Records changed permanently.")
+                                # Update DataFrame
+                                idx_to_update = df[df["Entry ID"] == eid].index[0]
+                                df.at[idx_to_update, "Date"] = ed_date.strftime("%d-%m-%Y")
+                                df.at[idx_to_update, "Party Name"] = ed_party
+                                df.at[idx_to_update, "Item Type"] = ed_item
+                                df.at[idx_to_update, "Challan No"] = ed_challan
+                                df.at[idx_to_update, "Design No"] = ed_design
+                                df.at[idx_to_update, "Sell Order"] = ed_sell
+                                df.at[idx_to_update, "Total Pcs"] = ed_total
+                                df.at[idx_to_update, "Fresh Pcs"] = ed_fresh
+                                df.at[idx_to_update, "Seconds Pcs"] = ed_seconds
+                                
+                                df.to_excel(EXCEL_FILE, sheet_name="Supervisor Entry", index=False)
+                                st.session_state["edit_row_id"] = None
+                                st.success("✅ Record Updated Successfully!")
+                                st.rerun()
+                    with submit_col2:
+                        if st.form_submit_button("❌ CANCEL", use_container_width=True):
+                            st.session_state["edit_row_id"] = None
                             st.rerun()
-                else:
-                    st.warning("No records available to edit for your account.")
+                            
+            # STATE 2: Show the Grid/Table Layout
             else:
-                st.warning("Excel file is empty or missing. Please make entries first.")
+                if excel_loaded and not df.empty:
+                    st.info("📅 Taki system slow na ho, kripya Date select karein usi din ka data dikhega. Har row ke aakhir mein Action buttons hain.")
+                    
+                    filter_date = st.date_input("Select Date to Load Records", datetime.now())
+                    f_date_str = filter_date.strftime("%d-%m-%Y")
+                    
+                    if user["role"] != "admin":
+                        mask = (df["Supervisor"] == user["name"]) & (df["Date"] == f_date_str)
+                    else:
+                        mask = (df["Date"] == f_date_str)
+                        
+                    display_df = df[mask].copy()
+                    
+                    if display_df.empty:
+                        st.warning(f"Is date ({f_date_str}) par koi records nahi hain.")
+                    else:
+                        # HEADER ROW
+                        st.markdown("""
+                        <div style="background-color:#1e293b; color:white; padding:10px; border-radius:5px; font-weight:bold; display:flex;">
+                            <div style="flex:1;">Entry ID</div>
+                            <div style="flex:1;">Design No</div>
+                            <div style="flex:1;">Sell Order</div>
+                            <div style="flex:2;">Party Name</div>
+                            <div style="flex:1;">Total Pcs</div>
+                            <div style="flex:1.5; text-align:center;">Action</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # DATA ROWS (Custom table build)
+                        for _, row in display_df.iterrows():
+                            # Render row container using columns
+                            col1, col2, col3, col4, col5, col_btn = st.columns([1, 1, 1, 2, 1, 1.5])
+                            
+                            with col1: st.write(f"**{row['Entry ID']}**")
+                            with col2: st.write(str(row['Design No']))
+                            with col3: st.write(str(row['Sell Order']))
+                            with col4: st.write(str(row['Party Name']))
+                            with col5: st.write(str(row['Total Pcs']))
+                            
+                            # ACTION BUTTONS IN LAST COLUMN
+                            with col_btn:
+                                b1, b2 = st.columns(2)
+                                if b1.button("✏️ Edit", key=f"edit_{row['Entry ID']}", help="Edit Record"):
+                                    st.session_state["edit_row_id"] = row['Entry ID']
+                                    st.rerun()
+                                if b2.button("🗑️ Del", key=f"del_{row['Entry ID']}", help="Delete Record"):
+                                    delete_entry_dialog(row['Entry ID'], df)
+                                    
+                            st.markdown("<hr style='margin:0px; padding:0px;'>", unsafe_allow_html=True)
+                else:
+                    st.warning("Excel file is empty. Make entries first.")
 
         # --- CONFIGURATIONS DESK FOR ADMIN ---
         elif user["role"] == "admin" and nav_choice == "⚙️ Factory Config":
